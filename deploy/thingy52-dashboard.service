@@ -1,0 +1,15 @@
+[Unit]
+Description=Thingy:52 Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/thingy52-dashboard
+EnvironmentFile=/home/pi/thingy52-dashboard/.env
+ExecStart=/home/pi/thingy52-dashboard/.venv/bin/python /home/pi/thingy52-dashboard/run.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

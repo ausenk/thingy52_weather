@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thingy:52 Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Edge Telemetry</p>
+          <h1>Thingy:52 dashboard on a Pi Zero</h1>
+          <p class="hero-copy">
+            Live environmental readings with local storage, quick filtering, and a lightweight UI.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <div class="mode-card">
+            <div>
+              <p class="mode-label">Collection mode</p>
+              <strong id="mode-value">Loading...</strong>
+              <p id="mode-caption" class="mode-caption"></p>
+            </div>
+            <label class="toggle-row" for="autopoll-toggle">
+              <span>Auto poll</span>
+              <input id="autopoll-toggle" type="checkbox" />
+            </label>
+          </div>
+          <button id="refresh-button" class="button">Poll now</button>
+        </div>
+      </section>
+
+      <section class="status-panel">
+        <div class="status-card status-card-primary">
+          <div class="panel-header">
+            <h2>Thingy:52 Status</h2>
+            <p id="connection-status">Loading device status...</p>
+          </div>
+          <div class="status-grid">
+            <div>
+              <span class="status-label">Device ID</span>
+              <strong id="device-id">-</strong>
+            </div>
+            <div>
+              <span class="status-label">Connector</span>
+              <strong id="connector-type">-</strong>
+            </div>
+            <div>
+              <span class="status-label">BLE address</span>
+              <strong id="ble-address">-</strong>
+            </div>
+            <div>
+              <span class="status-label">Last successful poll</span>
+              <strong id="last-success">-</strong>
+            </div>
+            <div>
+              <span class="status-label">Last poll attempt</span>
+              <strong id="last-poll">-</strong>
+            </div>
+            <div>
+              <span class="status-label">Last result</span>
+              <strong id="last-result">-</strong>
+            </div>
+          </div>
+          <p id="connection-error" class="connection-error hidden"></p>
+        </div>
+        <div class="status-card battery-card">
+          <p class="mode-label">Battery level</p>
+          <div class="battery-value-row">
+            <strong id="battery-level">--</strong>
+            <span id="battery-unit">%</span>
+          </div>
+          <div class="battery-meter" aria-hidden="true">
+            <div id="battery-fill" class="battery-fill"></div>
+          </div>
+          <p id="battery-time" class="mode-caption">No battery sample yet.</p>
+        </div>
+      </section>
+
+      <section class="controls">
+        <label>
+          <span>Metrics</span>
+          <select id="metric-select" multiple></select>
+        </label>
+        <label>
+          <span>Window</span>
+          <select id="window-select">
+            <option value="1">Last hour</option>
+            <option value="6">Last 6 hours</option>
+            <option value="24" selected>Last 24 hours</option>
+            <option value="168">Last 7 days</option>
+          </select>
+        </label>
+        <button id="apply-button" class="button button-secondary">Apply filters</button>
+      </section>
+
+      <section>
+        <div id="summary-cards" class="summary-grid"></div>
+      </section>
+
+      <section class="chart-panel">
+        <div class="panel-header">
+          <h2>Trend</h2>
+          <p id="chart-caption">No data loaded yet.</p>
+        </div>
+        <canvas id="chart" width="960" height="320"></canvas>
+      </section>
+
+      <section class="table-panel">
+        <div class="panel-header">
+          <h2>Recent samples</h2>
+          <p>Most recent records first.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Metric</th>
+                <th>Value</th>
+                <th>Unit</th>
+                <th>Source</th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
