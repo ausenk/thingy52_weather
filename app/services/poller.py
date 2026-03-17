@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from contextlib import suppress
 from datetime import datetime, timezone
+from typing import Any
 
 from app.connectors import MockThingy52Connector, SensorConnector, Thingy52BleConnector
 from app.config import Settings
@@ -29,6 +31,7 @@ class Poller:
         self._task: asyncio.Task[None] | None = None
         self._stop_event = asyncio.Event()
         self._poll_lock = asyncio.Lock()
+        self._subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
         self.last_poll_at: datetime | None = None
         self.last_success_at: datetime | None = None
         self.last_error: str | None = None
@@ -43,6 +46,7 @@ class Poller:
             await self.start()
         else:
             await self.stop()
+        await self.publish_event("poller", self.status_payload())
         return self.is_running
 
     async def start(self) -> None:
@@ -58,6 +62,38 @@ class Poller:
         await self._task
         self._task = None
 
+    def subscribe(self) -> asyncio.Queue[dict[str, Any]]:
+        queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        self._subscribers.add(queue)
+        return queue
+
+    def unsubscribe(self, queue: asyncio.Queue[dict[str, Any]]) -> None:
+        self._subscribers.discard(queue)
+
+    async def publish_event(self, event: str, payload: dict[str, Any]) -> None:
+        stale: list[asyncio.Queue[dict[str, Any]]] = []
+        message = {"event": event, "payload": payload}
+        for queue in self._subscribers:
+            try:
+                queue.put_nowait(message)
+            except asyncio.QueueFull:
+                stale.append(queue)
+        for queue in stale:
+            self._subscribers.discard(queue)
+
+    def status_payload(self) -> dict[str, Any]:
+        return {
+            "enabled": self.is_running,
+            "interval_seconds": self.settings.poll_interval_seconds,
+            "connector": self.settings.connector,
+            "device_id": self.settings.device_id,
+            "ble_address": self.settings.ble_address,
+            "last_poll_at": self.last_poll_at.isoformat() if self.last_poll_at else None,
+            "last_success_at": self.last_success_at.isoformat() if self.last_success_at else None,
+            "last_error": self.last_error,
+            "last_measurement_count": self.last_measurement_count,
+        }
+
     async def poll_once(self) -> int:
         async with self._poll_lock:
             self.last_poll_at = datetime.now(timezone.utc)
@@ -67,9 +103,18 @@ class Poller:
                 self.last_success_at = datetime.now(timezone.utc)
                 self.last_error = None
                 self.last_measurement_count = len(measurements)
+                await self.publish_event(
+                    "measurement",
+                    {
+                        "count": len(measurements),
+                        "captured_at": self.last_success_at.isoformat(),
+                    },
+                )
+                await self.publish_event("poller", self.status_payload())
                 return len(measurements)
             except Exception as exc:
                 self.last_error = str(exc)
+                await self.publish_event("poller", self.status_payload())
                 raise
 
     async def _run(self) -> None:

@@ -23,6 +23,9 @@ const chartCaption = document.querySelector("#chart-caption");
 
 let trendChart = null;
 let latestPollerStatus = null;
+let liveEvents = null;
+let reloadTimer = null;
+let dashboardLoadInFlight = null;
 
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
@@ -246,23 +249,70 @@ function drawChart(items) {
 }
 
 async function loadDashboard() {
-  const metricResponse = await fetchJson("/api/metrics");
-  if (!metricSelect.options.length) {
-    buildMetricOptions(metricResponse.metrics);
+  if (dashboardLoadInFlight) {
+    return dashboardLoadInFlight;
   }
 
-  await loadPollerStatus();
+  dashboardLoadInFlight = (async () => {
+    const metricResponse = await fetchJson("/api/metrics");
+    if (!metricSelect.options.length) {
+      buildMetricOptions(metricResponse.metrics);
+    }
 
-  const latestResponse = await fetchJson("/api/latest");
-  renderSummary(latestResponse.items);
-  updateThingyStatus(latestPollerStatus, latestResponse.items);
+    await loadPollerStatus();
 
-  const params = new URLSearchParams();
-  params.set("since_hours", windowSelect.value);
-  selectedMetrics().forEach((metric) => params.append("metric", metric));
-  const measurementsResponse = await fetchJson(`/api/measurements?${params.toString()}`);
-  renderTable(measurementsResponse.items);
-  drawChart(measurementsResponse.items);
+    const latestResponse = await fetchJson("/api/latest");
+    renderSummary(latestResponse.items);
+    updateThingyStatus(latestPollerStatus, latestResponse.items);
+
+    const params = new URLSearchParams();
+    params.set("since_hours", windowSelect.value);
+    selectedMetrics().forEach((metric) => params.append("metric", metric));
+    const measurementsResponse = await fetchJson(`/api/measurements?${params.toString()}`);
+    renderTable(measurementsResponse.items);
+    drawChart(measurementsResponse.items);
+  })();
+
+  try {
+    await dashboardLoadInFlight;
+  } finally {
+    dashboardLoadInFlight = null;
+  }
+}
+
+function scheduleDashboardReload(delay = 200) {
+  if (reloadTimer) {
+    window.clearTimeout(reloadTimer);
+  }
+  reloadTimer = window.setTimeout(() => {
+    reloadTimer = null;
+    loadDashboard().catch((error) => {
+      chartCaption.textContent = error.message;
+    });
+  }, delay);
+}
+
+function connectLiveUpdates() {
+  if (liveEvents) {
+    liveEvents.close();
+  }
+
+  liveEvents = new EventSource("/api/events");
+  liveEvents.addEventListener("measurement", () => {
+    scheduleDashboardReload(100);
+  });
+  liveEvents.addEventListener("poller", (event) => {
+    try {
+      latestPollerStatus = JSON.parse(event.data);
+      updateModeUi(latestPollerStatus);
+    } catch (error) {
+      chartCaption.textContent = "Live update parse failed.";
+    }
+    scheduleDashboardReload(100);
+  });
+  liveEvents.onerror = () => {
+    chartCaption.textContent = "Live updates disconnected. Reconnecting...";
+  };
 }
 
 refreshButton.addEventListener("click", async () => {
@@ -302,6 +352,7 @@ applyButton.addEventListener("click", () => {
   });
 });
 
+connectLiveUpdates();
 loadDashboard().catch((error) => {
   chartCaption.textContent = error.message;
 });

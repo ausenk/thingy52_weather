@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -46,35 +48,36 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/api/events")
+async def events() -> StreamingResponse:
+    async def event_stream():
+        queue = poller.subscribe()
+        try:
+            yield f"event: poller\ndata: {json.dumps(poller.status_payload())}\n\n"
+            while True:
+                try:
+                    message = await asyncio.wait_for(queue.get(), timeout=15)
+                    yield (
+                        f"event: {message['event']}\n"
+                        f"data: {json.dumps(message['payload'])}\n\n"
+                    )
+                except TimeoutError:
+                    yield "event: ping\ndata: {}\n\n"
+        finally:
+            poller.unsubscribe(queue)
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
 @app.get("/api/poller")
 async def get_poller_status() -> dict[str, object]:
-    return {
-        "enabled": poller.is_running,
-        "interval_seconds": settings.poll_interval_seconds,
-        "connector": settings.connector,
-        "device_id": settings.device_id,
-        "ble_address": settings.ble_address,
-        "last_poll_at": poller.last_poll_at.isoformat() if poller.last_poll_at else None,
-        "last_success_at": poller.last_success_at.isoformat() if poller.last_success_at else None,
-        "last_error": poller.last_error,
-        "last_measurement_count": poller.last_measurement_count,
-    }
+    return poller.status_payload()
 
 
 @app.post("/api/poller")
 async def set_poller_status(update: PollerModeUpdate) -> dict[str, object]:
-    enabled = await poller.set_enabled(update.enabled)
-    return {
-        "enabled": enabled,
-        "interval_seconds": settings.poll_interval_seconds,
-        "connector": settings.connector,
-        "device_id": settings.device_id,
-        "ble_address": settings.ble_address,
-        "last_poll_at": poller.last_poll_at.isoformat() if poller.last_poll_at else None,
-        "last_success_at": poller.last_success_at.isoformat() if poller.last_success_at else None,
-        "last_error": poller.last_error,
-        "last_measurement_count": poller.last_measurement_count,
-    }
+    await poller.set_enabled(update.enabled)
+    return poller.status_payload()
 
 
 @app.post("/api/poll")
