@@ -18,9 +18,7 @@ class Thingy52BleConnector(SensorConnector):
     TEMPERATURE_CHARACTERISTIC = "ef680201-9b35-4933-9b10-52ffa9740042"
     PRESSURE_CHARACTERISTIC = "ef680202-9b35-4933-9b10-52ffa9740042"
     HUMIDITY_CHARACTERISTIC = "ef680203-9b35-4933-9b10-52ffa9740042"
-    AIR_QUALITY_CHARACTERISTIC = "ef680204-9b35-4933-9b10-52ffa9740042"
     LIGHT_INTENSITY_CHARACTERISTIC = "ef680205-9b35-4933-9b10-52ffa9740042"
-    ENVIRONMENT_CONFIG_CHARACTERISTIC = "ef680206-9b35-4933-9b10-52ffa9740042"
     BATTERY_CHARACTERISTIC = "00002a19-0000-1000-8000-00805f9b34fb"
 
     def __init__(
@@ -53,16 +51,10 @@ class Thingy52BleConnector(SensorConnector):
             Measurement(self.device_id, "battery_level", battery_level, "%", now, "thingy52-ble"),
         ]
 
-        optional_metrics = [
-            ("air_quality_eco2", "ppm"),
-            ("air_quality_tvoc", "ppb"),
-            ("light_intensity", "counts"),
-        ]
-        for metric, unit in optional_metrics:
-            if metric in samples:
-                measurements.append(
-                    Measurement(self.device_id, metric, samples[metric], unit, now, "thingy52-ble")
-                )
+        if "light_intensity" in samples:
+            measurements.append(
+                Measurement(self.device_id, "light_intensity", samples["light_intensity"], "counts", now, "thingy52-ble")
+            )
 
         return measurements
 
@@ -96,7 +88,7 @@ class Thingy52BleConnector(SensorConnector):
         loop = asyncio.get_running_loop()
         received: dict[str, float] = {}
         required_metrics = {"temperature", "pressure", "humidity"}
-        all_metrics = required_metrics | {"air_quality_eco2", "air_quality_tvoc", "light_intensity"}
+        desired_metrics = required_metrics | {"light_intensity"}
         required_ready = loop.create_future()
 
         def build_handler(decoder):
@@ -112,7 +104,6 @@ class Thingy52BleConnector(SensorConnector):
             (self.TEMPERATURE_CHARACTERISTIC, self._decode_temperature),
             (self.PRESSURE_CHARACTERISTIC, self._decode_pressure),
             (self.HUMIDITY_CHARACTERISTIC, self._decode_humidity),
-            (self.AIR_QUALITY_CHARACTERISTIC, self._decode_air_quality),
             (self.LIGHT_INTENSITY_CHARACTERISTIC, self._decode_light_intensity),
         ]
 
@@ -128,8 +119,8 @@ class Thingy52BleConnector(SensorConnector):
                     "The device connected, but the core sensor samples did not arrive."
                 ) from exc
 
-            optional_deadline = loop.time() + min(3.0, self.connect_timeout_seconds / 4)
-            while loop.time() < optional_deadline and set(received) != all_metrics:
+            optional_deadline = loop.time() + min(2.0, self.connect_timeout_seconds / 5)
+            while loop.time() < optional_deadline and set(received) != desired_metrics:
                 await asyncio.sleep(0.1)
 
             return dict(received)
@@ -159,15 +150,6 @@ class Thingy52BleConnector(SensorConnector):
     @staticmethod
     def _decode_humidity(payload: bytearray) -> dict[str, float]:
         return {"humidity": float(int.from_bytes(payload[0:1], byteorder="little", signed=False))}
-
-    @staticmethod
-    def _decode_air_quality(payload: bytearray) -> dict[str, float]:
-        eco2 = int.from_bytes(payload[0:2], byteorder="little", signed=False)
-        tvoc = int.from_bytes(payload[2:4], byteorder="little", signed=False)
-        return {
-            "air_quality_eco2": float(eco2),
-            "air_quality_tvoc": float(tvoc),
-        }
 
     @staticmethod
     def _decode_light_intensity(payload: bytearray) -> dict[str, float]:

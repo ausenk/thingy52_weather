@@ -44,22 +44,6 @@ class MockThingy52Connector(SensorConnector):
             ),
             Measurement(
                 device_id=self.device_id,
-                metric="air_quality_eco2",
-                value=550.0 + math.sin(phase / 4) * 45 + random.uniform(-5, 5),
-                unit="ppm",
-                captured_at=now,
-                source="mock",
-            ),
-            Measurement(
-                device_id=self.device_id,
-                metric="air_quality_tvoc",
-                value=120.0 + math.cos(phase / 5) * 35 + random.uniform(-3, 3),
-                unit="ppb",
-                captured_at=now,
-                source="mock",
-            ),
-            Measurement(
-                device_id=self.device_id,
                 metric="light_intensity",
                 value=800.0 + math.sin(phase / 6) * 120 + random.uniform(-10, 10),
                 unit="counts",
