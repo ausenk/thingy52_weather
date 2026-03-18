@@ -264,18 +264,22 @@ function renderCurrentConditions(items) {
 
 function renderTable(items) {
   tableBody.innerHTML = "";
-  items.forEach((item) => {
-    const display = displayMetric(item.metric, item.value, item.unit);
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${formatTime(item.captured_at)}</td>
-      <td>${display.label}</td>
-      <td>${display.value.toFixed(display.digits)}</td>
-      <td>${display.unit}</td>
-      <td>${item.source}</td>
-    `;
-    tableBody.appendChild(row);
-  });
+  items
+    .slice()
+    .sort((a, b) => new Date(b.captured_at) - new Date(a.captured_at))
+    .slice(0, 10)
+    .forEach((item) => {
+      const display = displayMetric(item.metric, item.value, item.unit);
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${formatTime(item.captured_at)}</td>
+        <td>${display.label}</td>
+        <td>${display.value.toFixed(display.digits)}</td>
+        <td>${display.unit}</td>
+        <td>${item.source}</td>
+      `;
+      tableBody.appendChild(row);
+    });
 }
 
 function updateThingyStatus(status, latestItems) {
@@ -604,5 +608,6 @@ syncResponsiveState(false);
 loadDashboard().catch((error) => {
   plotsCaption.textContent = error.message;
 });
+
 
 

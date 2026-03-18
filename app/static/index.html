@@ -8,66 +8,14 @@
   </head>
   <body>
     <main class="layout">
-      <section class="hero">
-        <div class="hero-copy-block">
+      <section class="hero hero-compact">
+        <div class="hero-copy-block hero-copy-block-compact">
           <p class="eyebrow">Sensor Dashboard</p>
           <h1>Thingy:52</h1>
-          <p class="hero-copy">Live conditions, device status, and recent history.</p>
         </div>
       </section>
 
-      <section class="status-panel">
-        <div class="status-card status-card-primary">
-          <div class="panel-header">
-            <div>
-              <h2>Device Status</h2>
-              <p>Connection and recent collection activity.</p>
-            </div>
-            <p id="connection-status">Loading device status...</p>
-          </div>
-          <div class="status-grid">
-            <div>
-              <span class="status-label">Device ID</span>
-              <strong id="device-id">-</strong>
-            </div>
-            <div>
-              <span class="status-label">Connector</span>
-              <strong id="connector-type">-</strong>
-            </div>
-            <div>
-              <span class="status-label">BLE address</span>
-              <strong id="ble-address">-</strong>
-            </div>
-            <div>
-              <span class="status-label">Last successful poll</span>
-              <strong id="last-success">-</strong>
-            </div>
-            <div>
-              <span class="status-label">Last poll attempt</span>
-              <strong id="last-poll">-</strong>
-            </div>
-            <div>
-              <span class="status-label">Last result</span>
-              <strong id="last-result">-</strong>
-            </div>
-          </div>
-          <p id="connection-error" class="connection-error hidden"></p>
-        </div>
-
-        <div class="status-card battery-card">
-          <p class="mode-label">Battery</p>
-          <div class="battery-value-row">
-            <strong id="battery-level">--</strong>
-            <span id="battery-unit">%</span>
-          </div>
-          <div class="battery-meter" aria-hidden="true">
-            <div id="battery-fill" class="battery-fill"></div>
-          </div>
-          <p id="battery-time" class="mode-caption">No battery sample yet.</p>
-        </div>
-      </section>
-
-      <section class="conditions-panel">
+      <section class="conditions-panel conditions-panel-top">
         <div class="panel-header">
           <div>
             <h2>Current Conditions</h2>
@@ -155,8 +103,8 @@
       <details id="samples-panel" class="table-panel" open>
         <summary class="table-summary">
           <span>
-            <strong>Recent samples</strong>
-            <small>Raw measurements.</small>
+            <strong>Recent data</strong>
+            <small>10 most recent rows.</small>
           </span>
           <span>Show or hide</span>
         </summary>
@@ -175,10 +123,60 @@
           </table>
         </div>
       </details>
+
+      <section class="status-panel status-panel-bottom">
+        <div class="status-card battery-card">
+          <p class="mode-label">Battery</p>
+          <div class="battery-value-row">
+            <strong id="battery-level">--</strong>
+            <span id="battery-unit">%</span>
+          </div>
+          <div class="battery-meter" aria-hidden="true">
+            <div id="battery-fill" class="battery-fill"></div>
+          </div>
+          <p id="battery-time" class="mode-caption">No battery sample yet.</p>
+        </div>
+
+        <div class="status-card status-card-primary">
+          <div class="panel-header">
+            <div>
+              <h2>Device Health</h2>
+              <p>Connection and recent collection activity.</p>
+            </div>
+            <p id="connection-status">Loading device status...</p>
+          </div>
+          <div class="status-grid">
+            <div>
+              <span class="status-label">Device ID</span>
+              <strong id="device-id">-</strong>
+            </div>
+            <div>
+              <span class="status-label">Connector</span>
+              <strong id="connector-type">-</strong>
+            </div>
+            <div>
+              <span class="status-label">BLE address</span>
+              <strong id="ble-address">-</strong>
+            </div>
+            <div>
+              <span class="status-label">Last successful poll</span>
+              <strong id="last-success">-</strong>
+            </div>
+            <div>
+              <span class="status-label">Last poll attempt</span>
+              <strong id="last-poll">-</strong>
+            </div>
+            <div>
+              <span class="status-label">Last result</span>
+              <strong id="last-result">-</strong>
+            </div>
+          </div>
+          <p id="connection-error" class="connection-error hidden"></p>
+        </div>
+      </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script src="/static/app.js?v=20260318b"></script>
   </body>
 </html>
-
