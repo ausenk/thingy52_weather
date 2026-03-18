@@ -6,11 +6,20 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterator
 
-from .models import Measurement
+from .models import ForecastMeasurement, Measurement
 
 
 def _dict_factory(cursor: sqlite3.Cursor, row: tuple[object, ...]) -> dict[str, object]:
     return {column[0]: row[index] for index, column in enumerate(cursor.description)}
+
+
+def _parse_iso8601(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 
 class Database:
@@ -44,8 +53,34 @@ class Database:
             )
             connection.execute(
                 """
+                CREATE TABLE IF NOT EXISTS forecast_measurements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    location_key TEXT NOT NULL,
+                    metric TEXT NOT NULL,
+                    value REAL NOT NULL,
+                    unit TEXT NOT NULL,
+                    valid_at TEXT NOT NULL,
+                    fetched_at TEXT NOT NULL,
+                    source TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_measurements_metric_time
                 ON measurements(metric, captured_at)
+                """
+            )
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_forecast_metric_time
+                ON forecast_measurements(location_key, metric, valid_at)
+                """
+            )
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_forecast_fetched
+                ON forecast_measurements(location_key, fetched_at)
                 """
             )
             connection.commit()
@@ -78,6 +113,44 @@ class Database:
                     for item in measurements
                 ],
             )
+            connection.commit()
+
+    def replace_forecast_measurements(
+        self,
+        location_key: str,
+        measurements: list[ForecastMeasurement],
+    ) -> None:
+        with self.connect() as connection:
+            connection.execute(
+                "DELETE FROM forecast_measurements WHERE location_key = ?",
+                (location_key,),
+            )
+            if measurements:
+                connection.executemany(
+                    """
+                    INSERT INTO forecast_measurements (
+                        location_key,
+                        metric,
+                        value,
+                        unit,
+                        valid_at,
+                        fetched_at,
+                        source
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    [
+                        (
+                            item.location_key,
+                            item.metric,
+                            item.value,
+                            item.unit,
+                            item.valid_at.isoformat(),
+                            item.fetched_at.isoformat(),
+                            item.source,
+                        )
+                        for item in measurements
+                    ],
+                )
             connection.commit()
 
     def fetch_latest(self) -> list[dict[str, object]]:
@@ -127,3 +200,56 @@ class Database:
 
         with self.connect() as connection:
             return connection.execute(query, params).fetchall()
+
+    def fetch_forecast_measurements(
+        self,
+        location_key: str,
+        metrics: list[str] | None = None,
+        hours_ahead: int = 168,
+        limit: int = 5000,
+    ) -> list[dict[str, object]]:
+        now = datetime.now(timezone.utc)
+        until = now + timedelta(hours=hours_ahead)
+        query = """
+            SELECT metric, value, unit, valid_at, fetched_at, source
+            FROM forecast_measurements
+            WHERE location_key = ?
+              AND valid_at >= ?
+              AND valid_at <= ?
+        """
+        params: list[object] = [location_key, now.isoformat(), until.isoformat()]
+
+        if metrics:
+            placeholders = ", ".join("?" for _ in metrics)
+            query += f" AND metric IN ({placeholders})"
+            params.extend(metrics)
+
+        query += " ORDER BY valid_at ASC LIMIT ?"
+        params.append(limit)
+
+        with self.connect() as connection:
+            return connection.execute(query, params).fetchall()
+
+    def latest_forecast_fetched_at(self, location_key: str) -> datetime | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT MAX(fetched_at) AS fetched_at
+                FROM forecast_measurements
+                WHERE location_key = ?
+                """,
+                (location_key,),
+            ).fetchone()
+        return _parse_iso8601(None if row is None else row["fetched_at"])
+
+    def latest_forecast_valid_at(self, location_key: str) -> datetime | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT MAX(valid_at) AS valid_at
+                FROM forecast_measurements
+                WHERE location_key = ?
+                """,
+                (location_key,),
+            ).fetchone()
+        return _parse_iso8601(None if row is None else row["valid_at"])

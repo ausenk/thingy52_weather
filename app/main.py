@@ -12,11 +12,13 @@ from pydantic import BaseModel
 
 from .config import get_settings
 from .db import Database
+from .services.nws import NwsForecastService
 from .services.poller import Poller
 
 settings = get_settings()
 database = Database(settings.database_path)
 poller = Poller(settings, database)
+weather_service = NwsForecastService(settings, database)
 
 
 class PollerModeUpdate(BaseModel):
@@ -115,3 +117,14 @@ async def measurements(
             limit=limit,
         )
     }
+
+
+@app.get("/api/forecast")
+async def forecast(
+    metric: list[str] = Query(default=[]),
+    hours_ahead: int = Query(default=168, ge=1, le=24 * 10),
+) -> dict[str, object]:
+    try:
+        return await weather_service.get_forecast(metric or None, hours_ahead)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

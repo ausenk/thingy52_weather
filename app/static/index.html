@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Thingy:52 Dashboard</title>
-    <link rel="stylesheet" href="/static/style.css?v=20260318d" />
+    <link rel="stylesheet" href="/static/style.css?v=20260318e" />
   </head>
   <body>
     <main class="layout">
@@ -22,7 +22,7 @@
         <div id="conditions-cards" class="conditions-grid"></div>
       </section>
 
-      <section class="trend-workspace">
+      <section id="trend-workspace" class="trend-workspace" data-mode="past">
         <div class="panel-header panel-header-compact">
           <h2>Trends</h2>
         </div>
@@ -31,39 +31,51 @@
           <section class="controls-card controls-card-wide">
             <span class="status-label">Range</span>
             <div class="chip-group" id="window-chip-group">
-              <button class="chip" data-hours="1" type="button">1h</button>
-              <button class="chip" data-hours="6" type="button">6h</button>
-              <button class="chip is-active" data-hours="24" type="button">24h</button>
-              <button class="chip" data-hours="168" type="button">7d</button>
+              <button class="chip chip-range" data-hours="6" type="button">6h</button>
+              <button class="chip chip-range is-active" data-hours="24" type="button">24h</button>
+              <button class="chip chip-range" data-hours="72" type="button">3d</button>
+              <button class="chip chip-range" data-hours="168" type="button">7d</button>
+              <button class="chip chip-range" data-hours="240" type="button">10d</button>
+            </div>
+            <div class="mode-chip-group" id="mode-chip-group">
+              <button class="chip chip-mode chip-mode-past is-active" data-mode="past" type="button">Past</button>
+              <button class="chip chip-mode chip-mode-compare" data-mode="compare" type="button">Compare</button>
+              <button class="chip chip-mode chip-mode-future" data-mode="future" type="button">Future</button>
             </div>
           </section>
         </div>
 
         <div class="plot-stack">
-          <section class="plot-card">
+          <section id="luminance-plot-card" class="plot-card">
             <div class="plot-header">
               <h3>Luminance</h3>
             </div>
-            <div class="chart-shell chart-shell-standard">
-              <canvas id="luminance-chart"></canvas>
+            <div class="plot-scroll" id="luminance-plot-scroll">
+              <div class="chart-shell chart-shell-standard">
+                <canvas id="luminance-chart"></canvas>
+              </div>
             </div>
           </section>
 
-          <section class="plot-card">
+          <section id="temperature-plot-card" class="plot-card">
             <div class="plot-header">
               <h3>Temperature</h3>
             </div>
-            <div class="chart-shell chart-shell-standard">
-              <canvas id="temperature-chart"></canvas>
+            <div class="plot-scroll" id="temperature-plot-scroll">
+              <div class="chart-shell chart-shell-standard">
+                <canvas id="temperature-chart"></canvas>
+              </div>
             </div>
           </section>
 
-          <section class="plot-card">
+          <section id="humidity-pressure-plot-card" class="plot-card">
             <div class="plot-header">
               <h3>Humidity and Pressure</h3>
             </div>
-            <div class="chart-shell chart-shell-tall">
-              <canvas id="humidity-pressure-chart"></canvas>
+            <div class="plot-scroll" id="humidity-pressure-plot-scroll">
+              <div class="chart-shell chart-shell-tall">
+                <canvas id="humidity-pressure-chart"></canvas>
+              </div>
             </div>
           </section>
         </div>
@@ -145,6 +157,6 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    <script src="/static/app.js?v=20260318d"></script>
+    <script src="/static/app.js?v=20260318e"></script>
   </body>
 </html>

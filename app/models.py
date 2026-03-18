@@ -12,3 +12,14 @@ class Measurement:
     unit: str
     captured_at: datetime
     source: str
+
+
+@dataclass(slots=True)
+class ForecastMeasurement:
+    location_key: str
+    metric: str
+    value: float
+    unit: str
+    valid_at: datetime
+    fetched_at: datetime
+    source: str

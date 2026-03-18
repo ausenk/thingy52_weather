@@ -5,6 +5,7 @@ This project provides:
 - a background collector that polls a Thingy:52 at a configurable cadence
 - a local SQLite database for durable storage on-device
 - a lightweight dashboard for browsing recent metrics and filtering what is shown
+- cached National Weather Service forecast overlays for comparing measured and forecast conditions
 - deployment guidance for running on a Raspberry Pi Zero-class device
 
 ## Stack
@@ -12,12 +13,13 @@ This project provides:
 - Python 3.12
 - FastAPI for the API and static app hosting
 - SQLite for local persistence
-- Vanilla JavaScript and Canvas for the dashboard
+- Vanilla JavaScript and Chart.js for the dashboard
 
 ## Project layout
 
 - `app/main.py`: FastAPI app and API routes
 - `app/services/poller.py`: polling loop and connector selection
+- `app/services/nws.py`: NWS forecast fetch and cache logic
 - `app/connectors/mock.py`: mock data source for local development
 - `app/connectors/thingy52_ble.py`: BLE connector for a Nordic Thingy:52
 - `app/db.py`: SQLite storage helpers
@@ -40,6 +42,20 @@ Environment variables:
 - `THINGY52_POLL_INTERVAL_SECONDS`: cadence for background polling
 - `THINGY52_DATABASE_PATH`: SQLite file location
 - `THINGY52_BLE_ADDRESS`: BLE address for the Thingy:52 when using BLE mode
+- `THINGY52_NWS_LATITUDE`: latitude used to look up the NWS forecast gridpoint
+- `THINGY52_NWS_LONGITUDE`: longitude used to look up the NWS forecast gridpoint
+- `THINGY52_NWS_USER_AGENT`: user agent string sent to the NWS API
+- `THINGY52_WEATHER_REFRESH_MINUTES`: local forecast cache refresh interval
+
+## Forecast modes
+
+The dashboard supports three shared plot modes:
+
+- `Past`: only locally measured Thingy:52 history
+- `Compare`: measured history plus current NWS forecast overlays
+- `Future`: forecast-only temperature, humidity, and pressure trends
+
+The NWS forecast integration currently uses the official gridpoint API and caches the latest snapshot locally in SQLite. NWS forecast coverage is typically about 7 days, so the `10d` range will show all forecast data currently available from NWS when the API does not extend that far.
 
 ## Raspberry Pi Zero deployment
 
@@ -54,7 +70,7 @@ For a Pi Zero, the realistic target is a Raspberry Pi Zero W or Zero 2 W so BLE 
    - `python3 -m venv .venv`
    - `. .venv/bin/activate`
    - `pip install -r requirements.txt`
-5. Create `.env` from `.env.example`, set `THINGY52_CONNECTOR=ble`, and provide `THINGY52_BLE_ADDRESS`.
+5. Create `.env` from `.env.example`, set `THINGY52_CONNECTOR=ble`, provide `THINGY52_BLE_ADDRESS`, and set the NWS latitude/longitude.
 6. Install the service:
    - `sudo cp deploy/thingy52-dashboard.service /etc/systemd/system/`
    - `sudo systemctl daemon-reload`
@@ -69,6 +85,7 @@ For a Pi Zero, the realistic target is a Raspberry Pi Zero W or Zero 2 W so BLE 
 - `GET /api/metrics`
 - `GET /api/latest`
 - `GET /api/measurements?metric=temperature&since_hours=24`
+- `GET /api/forecast?metric=temperature&hours_ahead=168`
 
 ## Notes on Thingy:52 integration
 
@@ -83,7 +100,7 @@ You can test the full app on Windows first.
    - `python scripts/discover_thingy52.py`
 3. Copy the discovered address into `.env` as `THINGY52_BLE_ADDRESS`.
 4. Set `THINGY52_CONNECTOR=ble`.
-5. Restart the app and use the dashboard `Poll now` button or `POST /api/poll`.
+5. Restart the app and test the dashboard.
 
 If the scanner does not find the device, check that:
 

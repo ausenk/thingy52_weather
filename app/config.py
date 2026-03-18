@@ -25,6 +25,13 @@ def env_flag(name: str, default: bool) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def env_float(name: str) -> float | None:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return None
+    return float(raw)
+
+
 @dataclass(slots=True)
 class Settings:
     device_id: str = field(
@@ -49,6 +56,21 @@ class Settings:
     )
     ble_connect_timeout_seconds: float = field(
         default_factory=lambda: float(os.getenv("THINGY52_BLE_CONNECT_TIMEOUT_SECONDS", "20"))
+    )
+    nws_latitude: float | None = field(
+        default_factory=lambda: env_float("THINGY52_NWS_LATITUDE")
+    )
+    nws_longitude: float | None = field(
+        default_factory=lambda: env_float("THINGY52_NWS_LONGITUDE")
+    )
+    nws_user_agent: str = field(
+        default_factory=lambda: os.getenv(
+            "THINGY52_NWS_USER_AGENT",
+            "thingy52-dashboard (local use; set THINGY52_NWS_USER_AGENT with contact)",
+        )
+    )
+    weather_refresh_minutes: int = field(
+        default_factory=lambda: int(os.getenv("THINGY52_WEATHER_REFRESH_MINUTES", "60"))
     )
 
 

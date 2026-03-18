@@ -28,14 +28,18 @@ const batteryFill = document.querySelector("#battery-fill");
 const batteryTime = document.querySelector("#battery-time");
 const conditionsCards = document.querySelector("#conditions-cards");
 const windowChipGroup = document.querySelector("#window-chip-group");
+const modeChipGroup = document.querySelector("#mode-chip-group");
+const trendWorkspace = document.querySelector("#trend-workspace");
 const tableBody = document.querySelector("#table-body");
 const luminanceCanvas = document.querySelector("#luminance-chart");
 const temperatureCanvas = document.querySelector("#temperature-chart");
 const humidityPressureCanvas = document.querySelector("#humidity-pressure-chart");
+const luminancePlotCard = document.querySelector("#luminance-plot-card");
 const samplesPanel = document.querySelector("#samples-panel");
 const mobileLayout = window.matchMedia(MOBILE_LAYOUT_QUERY);
 
-let selectedHours = "24";
+let selectedHours = 24;
+let selectedMode = "past";
 let luminanceChart = null;
 let temperatureChart = null;
 let humidityPressureChart = null;
@@ -168,6 +172,19 @@ function estimateAltitudeFeet(pressureHpa, seaLevelPressureHpa = STANDARD_SEA_LE
   return altitudeMeters * METERS_TO_FEET;
 }
 
+function showDashboardError(message) {
+  connectionError.textContent = message;
+  connectionError.classList.remove("hidden");
+}
+
+function clearDashboardError() {
+  if (latestPollerStatus?.last_error) {
+    return;
+  }
+  connectionError.textContent = "";
+  connectionError.classList.add("hidden");
+}
+
 function displayMetric(metric, rawValue, rawUnit) {
   if (metric === "temperature") {
     return { label: FRIENDLY_LABELS[metric], value: celsiusToFahrenheit(Number(rawValue)), unit: "F", digits: 1 };
@@ -185,9 +202,17 @@ function displayMetric(metric, rawValue, rawUnit) {
 }
 
 function syncWindowChips() {
-  Array.from(windowChipGroup.querySelectorAll(".chip")).forEach((chip) => {
-    chip.classList.toggle("is-active", chip.dataset.hours === selectedHours);
+  Array.from(windowChipGroup.querySelectorAll(".chip-range")).forEach((chip) => {
+    chip.classList.toggle("is-active", Number(chip.dataset.hours) === selectedHours);
   });
+}
+
+function syncModeChips() {
+  Array.from(modeChipGroup.querySelectorAll(".chip-mode")).forEach((chip) => {
+    chip.classList.toggle("is-active", chip.dataset.mode === selectedMode);
+  });
+  trendWorkspace.dataset.mode = selectedMode;
+  luminancePlotCard.style.display = selectedMode === "future" ? "none" : "block";
 }
 
 function renderCurrentConditions(items) {
@@ -241,6 +266,7 @@ function renderTable(items) {
 }
 
 function updateThingyStatus(status, latestItems) {
+  latestPollerStatus = status;
   const battery = latestItems.find((item) => item.metric === "battery_level");
 
   deviceId.textContent = status.device_id || "-";
@@ -252,16 +278,13 @@ function updateThingyStatus(status, latestItems) {
 
   if (status.last_error) {
     connectionStatus.textContent = "Needs attention";
-    connectionError.textContent = status.last_error;
-    connectionError.classList.remove("hidden");
+    showDashboardError(status.last_error);
   } else if (status.last_success_at) {
     connectionStatus.textContent = "Receiving data";
-    connectionError.textContent = "";
-    connectionError.classList.add("hidden");
+    clearDashboardError();
   } else {
     connectionStatus.textContent = "Waiting for first poll";
-    connectionError.textContent = "";
-    connectionError.classList.add("hidden");
+    clearDashboardError();
   }
 
   if (battery) {
@@ -346,7 +369,14 @@ function sortedSeries(items, metric, transform = (value) => Number(value)) {
     .map((item) => ({ x: new Date(item.captured_at).getTime(), y: transform(item.value) }));
 }
 
-function drawCharts(items) {
+function sortedForecastSeries(items, metric, transform = (value) => Number(value)) {
+  return items
+    .filter((item) => item.metric === metric)
+    .sort((a, b) => new Date(a.valid_at) - new Date(b.valid_at))
+    .map((item) => ({ x: new Date(item.valid_at).getTime(), y: transform(item.value) }));
+}
+
+function drawCharts(measurements, forecastItems) {
   destroyChart(luminanceChart);
   destroyChart(temperatureChart);
   destroyChart(humidityPressureChart);
@@ -354,12 +384,19 @@ function drawCharts(items) {
   temperatureChart = null;
   humidityPressureChart = null;
 
-  const luminanceData = sortedSeries(items, "light_intensity");
-  const temperatureData = sortedSeries(items, "temperature", (value) => celsiusToFahrenheit(Number(value)));
-  const humidityData = sortedSeries(items, "humidity");
-  const pressureData = sortedSeries(items, "pressure", (value) => pressureToInHg(Number(value)));
+  const actualLuminance = sortedSeries(measurements, "light_intensity");
+  const actualTemperature = sortedSeries(measurements, "temperature", (value) => celsiusToFahrenheit(Number(value)));
+  const actualHumidity = sortedSeries(measurements, "humidity");
+  const actualPressure = sortedSeries(measurements, "pressure", (value) => pressureToInHg(Number(value)));
 
-  if (luminanceData.length) {
+  const forecastTemperature = sortedForecastSeries(forecastItems, "temperature", (value) => celsiusToFahrenheit(Number(value)));
+  const forecastHumidity = sortedForecastSeries(forecastItems, "humidity");
+  const forecastPressure = sortedForecastSeries(forecastItems, "pressure", (value) => pressureToInHg(Number(value)));
+
+  const showActual = selectedMode !== "future";
+  const showForecast = selectedMode !== "past";
+
+  if (showActual && actualLuminance.length) {
     const options = baseChartOptions();
     options.scales.y = {
       ticks: { color: "#9aa4b2", maxTicksLimit: isMobileLayout() ? 4 : 6 },
@@ -371,7 +408,7 @@ function drawCharts(items) {
       data: {
         datasets: [{
           label: "Luminance",
-          data: luminanceData,
+          data: actualLuminance,
           borderColor: "#fde68a",
           backgroundColor: "rgba(253, 230, 138, 0.16)",
           fill: false,
@@ -381,7 +418,27 @@ function drawCharts(items) {
     });
   }
 
-  if (temperatureData.length) {
+  const temperatureDatasets = [];
+  if (showActual && actualTemperature.length) {
+    temperatureDatasets.push({
+      label: "Measured Temperature",
+      data: actualTemperature,
+      borderColor: "#f97316",
+      backgroundColor: "rgba(249, 115, 22, 0.16)",
+      fill: false,
+    });
+  }
+  if (showForecast && forecastTemperature.length) {
+    temperatureDatasets.push({
+      label: "Forecast Temperature",
+      data: forecastTemperature,
+      borderColor: "#fdba74",
+      backgroundColor: "rgba(253, 186, 116, 0.14)",
+      borderDash: [8, 5],
+      fill: false,
+    });
+  }
+  if (temperatureDatasets.length) {
     const options = baseChartOptions();
     options.scales.y = {
       min: 0,
@@ -392,20 +449,56 @@ function drawCharts(items) {
     };
     temperatureChart = new Chart(temperatureCanvas, {
       type: "line",
-      data: {
-        datasets: [{
-          label: "Temperature (F)",
-          data: temperatureData,
-          borderColor: "#f97316",
-          backgroundColor: "rgba(249, 115, 22, 0.16)",
-          fill: false,
-        }],
-      },
+      data: { datasets: temperatureDatasets },
       options,
     });
   }
 
-  if (humidityData.length || pressureData.length) {
+  const humidityPressureDatasets = [];
+  if (showActual && actualHumidity.length) {
+    humidityPressureDatasets.push({
+      label: "Measured Humidity",
+      data: actualHumidity,
+      yAxisID: "yHumidity",
+      borderColor: "#38bdf8",
+      backgroundColor: "rgba(56, 189, 248, 0.16)",
+      fill: false,
+    });
+  }
+  if (showForecast && forecastHumidity.length) {
+    humidityPressureDatasets.push({
+      label: "Forecast Humidity",
+      data: forecastHumidity,
+      yAxisID: "yHumidity",
+      borderColor: "#7dd3fc",
+      backgroundColor: "rgba(125, 211, 252, 0.14)",
+      borderDash: [8, 5],
+      fill: false,
+    });
+  }
+  if (showActual && actualPressure.length) {
+    humidityPressureDatasets.push({
+      label: "Measured Pressure",
+      data: actualPressure,
+      yAxisID: "yPressure",
+      borderColor: "#a78bfa",
+      backgroundColor: "rgba(167, 139, 250, 0.16)",
+      fill: false,
+    });
+  }
+  if (showForecast && forecastPressure.length) {
+    humidityPressureDatasets.push({
+      label: "Forecast Pressure",
+      data: forecastPressure,
+      yAxisID: "yPressure",
+      borderColor: "#c4b5fd",
+      backgroundColor: "rgba(196, 181, 253, 0.14)",
+      borderDash: [8, 5],
+      fill: false,
+    });
+  }
+
+  if (humidityPressureDatasets.length) {
     const options = baseChartOptions();
     options.scales.yHumidity = {
       type: "linear",
@@ -427,26 +520,7 @@ function drawCharts(items) {
     };
     humidityPressureChart = new Chart(humidityPressureCanvas, {
       type: "line",
-      data: {
-        datasets: [
-          {
-            label: "Humidity",
-            data: humidityData,
-            yAxisID: "yHumidity",
-            borderColor: "#38bdf8",
-            backgroundColor: "rgba(56, 189, 248, 0.16)",
-            fill: false,
-          },
-          {
-            label: "Pressure (inHg)",
-            data: pressureData,
-            yAxisID: "yPressure",
-            borderColor: "#a78bfa",
-            backgroundColor: "rgba(167, 139, 250, 0.16)",
-            fill: false,
-          },
-        ],
-      },
+      data: { datasets: humidityPressureDatasets },
       options,
     });
   }
@@ -471,20 +545,46 @@ async function loadDashboard() {
 
   dashboardLoadInFlight = (async () => {
     syncWindowChips();
+    syncModeChips();
+
     await loadPollerStatus();
 
-    const latestResponse = await fetchJson("/api/latest");
+    const measurementParams = new URLSearchParams();
+    measurementParams.set("since_hours", String(Math.min(selectedHours, 24 * 30)));
+    measurementParams.set("limit", "5000");
+    ["light_intensity", "temperature", "humidity", "pressure"].forEach((metric) => {
+      measurementParams.append("metric", metric);
+    });
+
+    const requests = [
+      fetchJson("/api/latest"),
+      fetchJson(`/api/measurements?${measurementParams.toString()}`),
+    ];
+
+    if (selectedMode !== "past") {
+      const forecastParams = new URLSearchParams();
+      forecastParams.set("hours_ahead", String(selectedHours));
+      ["temperature", "humidity", "pressure"].forEach((metric) => {
+        forecastParams.append("metric", metric);
+      });
+      requests.push(fetchJson(`/api/forecast?${forecastParams.toString()}`));
+    }
+
+    const [latestResponse, measurementsResponse, forecastResponse] = await Promise.all(requests);
     const latestItems = latestResponse.items.filter((item) => !item.metric.startsWith("air_quality_"));
+    const measurementItems = measurementsResponse.items.filter((item) => !item.metric.startsWith("air_quality_"));
+    const forecastItems = forecastResponse?.items ?? [];
+
     renderCurrentConditions(latestItems);
     updateThingyStatus(latestPollerStatus, latestItems);
-
-    const params = new URLSearchParams();
-    params.set("since_hours", selectedHours);
-    ["light_intensity", "temperature", "humidity", "pressure"].forEach((metric) => params.append("metric", metric));
-    const measurementsResponse = await fetchJson(`/api/measurements?${params.toString()}`);
-    const measurementItems = measurementsResponse.items.filter((item) => !item.metric.startsWith("air_quality_"));
     renderTable(measurementItems);
-    drawCharts(measurementItems);
+    drawCharts(measurementItems, forecastItems);
+
+    if (selectedMode !== "past" && forecastResponse && !forecastResponse.configured) {
+      showDashboardError("Set THINGY52_NWS_LATITUDE and THINGY52_NWS_LONGITUDE to enable forecast modes.");
+    } else if (!latestPollerStatus?.last_error) {
+      clearDashboardError();
+    }
   })();
 
   try {
@@ -501,8 +601,7 @@ function scheduleDashboardReload(delay = 200) {
   reloadTimer = window.setTimeout(() => {
     reloadTimer = null;
     loadDashboard().catch((error) => {
-      connectionError.textContent = error.message;
-      connectionError.classList.remove("hidden");
+      showDashboardError(error.message);
     });
   }, delay);
 }
@@ -515,21 +614,31 @@ function connectLiveUpdates() {
   liveEvents.addEventListener("measurement", () => scheduleDashboardReload(100));
   liveEvents.addEventListener("poller", () => scheduleDashboardReload(100));
   liveEvents.onerror = () => {
-    connectionError.textContent = "Live updates disconnected. Reconnecting...";
-    connectionError.classList.remove("hidden");
+    showDashboardError("Live updates disconnected. Reconnecting...");
   };
 }
 
 windowChipGroup.addEventListener("click", (event) => {
-  const chip = event.target.closest(".chip[data-hours]");
+  const chip = event.target.closest(".chip-range[data-hours]");
   if (!chip) {
     return;
   }
-  selectedHours = chip.dataset.hours;
+  selectedHours = Number(chip.dataset.hours);
   syncWindowChips();
   loadDashboard().catch((error) => {
-    connectionError.textContent = error.message;
-    connectionError.classList.remove("hidden");
+    showDashboardError(error.message);
+  });
+});
+
+modeChipGroup.addEventListener("click", (event) => {
+  const chip = event.target.closest(".chip-mode[data-mode]");
+  if (!chip) {
+    return;
+  }
+  selectedMode = chip.dataset.mode;
+  syncModeChips();
+  loadDashboard().catch((error) => {
+    showDashboardError(error.message);
   });
 });
 
@@ -540,6 +649,6 @@ mobileLayout.addEventListener("change", () => {
 connectLiveUpdates();
 syncResponsiveState(false);
 loadDashboard().catch((error) => {
-  connectionError.textContent = error.message;
-  connectionError.classList.remove("hidden");
+  showDashboardError(error.message);
 });
+
