@@ -15,9 +15,6 @@ const HPA_TO_INHG = 0.0295299830714;
 const METERS_TO_FEET = 3.28084;
 const MOBILE_LAYOUT_QUERY = "(max-width: 720px)";
 
-const windowSelect = document.querySelector("#window-select");
-const smoothingToggle = document.querySelector("#smoothing-toggle");
-const smoothingWindowInput = document.querySelector("#smoothing-window");
 const deviceId = document.querySelector("#device-id");
 const connectorType = document.querySelector("#connector-type");
 const bleAddress = document.querySelector("#ble-address");
@@ -29,17 +26,16 @@ const connectionError = document.querySelector("#connection-error");
 const batteryLevel = document.querySelector("#battery-level");
 const batteryFill = document.querySelector("#battery-fill");
 const batteryTime = document.querySelector("#battery-time");
-const conditionsUpdated = document.querySelector("#conditions-updated");
 const conditionsCards = document.querySelector("#conditions-cards");
 const windowChipGroup = document.querySelector("#window-chip-group");
 const tableBody = document.querySelector("#table-body");
-const plotsCaption = document.querySelector("#plots-caption");
 const luminanceCanvas = document.querySelector("#luminance-chart");
 const temperatureCanvas = document.querySelector("#temperature-chart");
 const humidityPressureCanvas = document.querySelector("#humidity-pressure-chart");
 const samplesPanel = document.querySelector("#samples-panel");
 const mobileLayout = window.matchMedia(MOBILE_LAYOUT_QUERY);
 
+let selectedHours = "24";
 let luminanceChart = null;
 let temperatureChart = null;
 let humidityPressureChart = null;
@@ -172,38 +168,6 @@ function estimateAltitudeFeet(pressureHpa, seaLevelPressureHpa = STANDARD_SEA_LE
   return altitudeMeters * METERS_TO_FEET;
 }
 
-function smoothingWindowSize() {
-  const parsed = Number.parseInt(smoothingWindowInput.value, 10);
-  if (!Number.isFinite(parsed)) {
-    return 1;
-  }
-  return Math.max(1, Math.min(25, parsed));
-}
-
-function isSmoothingEnabled() {
-  return smoothingToggle.checked && smoothingWindowSize() > 1;
-}
-
-function smoothSeries(points) {
-  if (!isSmoothingEnabled()) {
-    return points;
-  }
-
-  const windowSize = smoothingWindowSize();
-  return points.map((point, index) => {
-    const start = Math.max(0, index - windowSize + 1);
-    let total = 0;
-    let count = 0;
-
-    for (let i = start; i <= index; i += 1) {
-      total += points[i].y;
-      count += 1;
-    }
-
-    return { x: point.x, y: total / count };
-  });
-}
-
 function displayMetric(metric, rawValue, rawUnit) {
   if (metric === "temperature") {
     return { label: FRIENDLY_LABELS[metric], value: celsiusToFahrenheit(Number(rawValue)), unit: "F", digits: 1 };
@@ -222,7 +186,7 @@ function displayMetric(metric, rawValue, rawUnit) {
 
 function syncWindowChips() {
   Array.from(windowChipGroup.querySelectorAll(".chip")).forEach((chip) => {
-    chip.classList.toggle("is-active", chip.dataset.hours === windowSelect.value);
+    chip.classList.toggle("is-active", chip.dataset.hours === selectedHours);
   });
 }
 
@@ -254,12 +218,6 @@ function renderCurrentConditions(items) {
     `;
     conditionsCards.appendChild(card);
   });
-
-  const newest = items.reduce((latest, item) => {
-    if (!latest) return item;
-    return new Date(item.captured_at) > new Date(latest.captured_at) ? item : latest;
-  }, null);
-  conditionsUpdated.textContent = newest ? `Updated ${formatTime(newest.captured_at)}` : "Waiting for data...";
 }
 
 function renderTable(items) {
@@ -382,12 +340,10 @@ function baseChartOptions() {
 }
 
 function sortedSeries(items, metric, transform = (value) => Number(value)) {
-  const points = items
+  return items
     .filter((item) => item.metric === metric)
     .sort((a, b) => new Date(a.captured_at) - new Date(b.captured_at))
     .map((item) => ({ x: new Date(item.captured_at).getTime(), y: transform(item.value) }));
-
-  return smoothSeries(points);
 }
 
 function drawCharts(items) {
@@ -398,7 +354,6 @@ function drawCharts(items) {
   temperatureChart = null;
   humidityPressureChart = null;
 
-  const smoothingLabel = isSmoothingEnabled() ? `, MA ${smoothingWindowSize()}` : "";
   const luminanceData = sortedSeries(items, "light_intensity");
   const temperatureData = sortedSeries(items, "temperature", (value) => celsiusToFahrenheit(Number(value)));
   const humidityData = sortedSeries(items, "humidity");
@@ -415,7 +370,7 @@ function drawCharts(items) {
       type: "line",
       data: {
         datasets: [{
-          label: `Luminance${smoothingLabel}`,
+          label: "Luminance",
           data: luminanceData,
           borderColor: "#fde68a",
           backgroundColor: "rgba(253, 230, 138, 0.16)",
@@ -439,7 +394,7 @@ function drawCharts(items) {
       type: "line",
       data: {
         datasets: [{
-          label: `Temperature (F)${smoothingLabel}`,
+          label: "Temperature (F)",
           data: temperatureData,
           borderColor: "#f97316",
           backgroundColor: "rgba(249, 115, 22, 0.16)",
@@ -475,7 +430,7 @@ function drawCharts(items) {
       data: {
         datasets: [
           {
-            label: `Humidity${smoothingLabel}`,
+            label: "Humidity",
             data: humidityData,
             yAxisID: "yHumidity",
             borderColor: "#38bdf8",
@@ -483,7 +438,7 @@ function drawCharts(items) {
             fill: false,
           },
           {
-            label: `Pressure (inHg)${smoothingLabel}`,
+            label: "Pressure (inHg)",
             data: pressureData,
             yAxisID: "yPressure",
             borderColor: "#a78bfa",
@@ -495,10 +450,6 @@ function drawCharts(items) {
       options,
     });
   }
-
-  const totalPoints = luminanceData.length + temperatureData.length + humidityData.length + pressureData.length;
-  const suffix = isSmoothingEnabled() ? ` using smoothing window ${smoothingWindowSize()}` : "";
-  plotsCaption.textContent = totalPoints ? `${totalPoints} points in the selected time range${suffix}` : "No data loaded yet.";
 }
 
 function syncResponsiveState(forceRedraw = false) {
@@ -528,7 +479,7 @@ async function loadDashboard() {
     updateThingyStatus(latestPollerStatus, latestItems);
 
     const params = new URLSearchParams();
-    params.set("since_hours", windowSelect.value);
+    params.set("since_hours", selectedHours);
     ["light_intensity", "temperature", "humidity", "pressure"].forEach((metric) => params.append("metric", metric));
     const measurementsResponse = await fetchJson(`/api/measurements?${params.toString()}`);
     const measurementItems = measurementsResponse.items.filter((item) => !item.metric.startsWith("air_quality_"));
@@ -550,7 +501,8 @@ function scheduleDashboardReload(delay = 200) {
   reloadTimer = window.setTimeout(() => {
     reloadTimer = null;
     loadDashboard().catch((error) => {
-      plotsCaption.textContent = error.message;
+      connectionError.textContent = error.message;
+      connectionError.classList.remove("hidden");
     });
   }, delay);
 }
@@ -563,7 +515,8 @@ function connectLiveUpdates() {
   liveEvents.addEventListener("measurement", () => scheduleDashboardReload(100));
   liveEvents.addEventListener("poller", () => scheduleDashboardReload(100));
   liveEvents.onerror = () => {
-    plotsCaption.textContent = "Live updates disconnected. Reconnecting...";
+    connectionError.textContent = "Live updates disconnected. Reconnecting...";
+    connectionError.classList.remove("hidden");
   };
 }
 
@@ -572,30 +525,11 @@ windowChipGroup.addEventListener("click", (event) => {
   if (!chip) {
     return;
   }
-  windowSelect.value = chip.dataset.hours;
+  selectedHours = chip.dataset.hours;
   syncWindowChips();
   loadDashboard().catch((error) => {
-    plotsCaption.textContent = error.message;
-  });
-});
-
-windowSelect.addEventListener("change", () => {
-  syncWindowChips();
-  loadDashboard().catch((error) => {
-    plotsCaption.textContent = error.message;
-  });
-});
-
-smoothingToggle.addEventListener("change", () => {
-  loadDashboard().catch((error) => {
-    plotsCaption.textContent = error.message;
-  });
-});
-
-smoothingWindowInput.addEventListener("input", () => {
-  smoothingWindowInput.value = String(smoothingWindowSize());
-  loadDashboard().catch((error) => {
-    plotsCaption.textContent = error.message;
+    connectionError.textContent = error.message;
+    connectionError.classList.remove("hidden");
   });
 });
 
@@ -606,8 +540,6 @@ mobileLayout.addEventListener("change", () => {
 connectLiveUpdates();
 syncResponsiveState(false);
 loadDashboard().catch((error) => {
-  plotsCaption.textContent = error.message;
+  connectionError.textContent = error.message;
+  connectionError.classList.remove("hidden");
 });
-
-
-

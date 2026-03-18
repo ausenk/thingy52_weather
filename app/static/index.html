@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Thingy:52 Dashboard</title>
-    <link rel="stylesheet" href="/static/style.css?v=20260318c" />
+    <link rel="stylesheet" href="/static/style.css?v=20260318d" />
   </head>
   <body>
     <main class="layout">
@@ -16,57 +16,26 @@
       </section>
 
       <section class="conditions-panel conditions-panel-top">
-        <div class="panel-header">
-          <div>
-            <h2>Current Conditions</h2>
-            <p>Latest readings from the device.</p>
-          </div>
-          <p id="conditions-updated" class="section-note">Waiting for data...</p>
+        <div class="panel-header panel-header-compact">
+          <h2>Current Conditions</h2>
         </div>
         <div id="conditions-cards" class="conditions-grid"></div>
       </section>
 
       <section class="trend-workspace">
-        <div class="panel-header trend-header">
-          <div>
-            <h2>Plots</h2>
-            <p>Three fixed views with a shared time range.</p>
-          </div>
-          <p id="plots-caption">No data loaded yet.</p>
+        <div class="panel-header panel-header-compact">
+          <h2>Trends</h2>
         </div>
 
-        <div class="trend-controls">
+        <div class="trend-controls trend-controls-simple">
           <section class="controls-card controls-card-wide">
-            <span class="status-label">Quick range</span>
+            <span class="status-label">Range</span>
             <div class="chip-group" id="window-chip-group">
               <button class="chip" data-hours="1" type="button">1h</button>
               <button class="chip" data-hours="6" type="button">6h</button>
               <button class="chip is-active" data-hours="24" type="button">24h</button>
               <button class="chip" data-hours="168" type="button">7d</button>
             </div>
-          </section>
-
-          <section class="controls-card">
-            <label class="window-select-wrap" for="window-select">
-              <span class="status-label">Exact window</span>
-              <select id="window-select">
-                <option value="1">Last hour</option>
-                <option value="6">Last 6 hours</option>
-                <option value="24" selected>Last 24 hours</option>
-                <option value="168">Last 7 days</option>
-              </select>
-            </label>
-          </section>
-
-          <section class="controls-card smoothing-controls">
-            <label class="toggle-inline" for="smoothing-toggle">
-              <input id="smoothing-toggle" type="checkbox" />
-              <span>Smoothed</span>
-            </label>
-            <label class="window-select-wrap smoothing-window-wrap" for="smoothing-window">
-              <span class="status-label">Window</span>
-              <input id="smoothing-window" type="number" min="1" max="25" step="1" value="5" />
-            </label>
           </section>
         </div>
 
@@ -141,7 +110,6 @@
           <div class="panel-header">
             <div>
               <h2>Device Health</h2>
-              <p>Connection and recent collection activity.</p>
             </div>
             <p id="connection-status">Loading device status...</p>
           </div>
@@ -177,7 +145,6 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    <script src="/static/app.js?v=20260318c"></script>
+    <script src="/static/app.js?v=20260318d"></script>
   </body>
 </html>
-
