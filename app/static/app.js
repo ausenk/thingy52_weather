@@ -163,6 +163,10 @@ function pressureToInHg(valueHpa) {
   return valueHpa * HPA_TO_INHG;
 }
 
+function celsiusToFahrenheit(valueCelsius) {
+  return (valueCelsius * 9) / 5 + 32;
+}
+
 function estimateAltitudeFeet(pressureHpa, seaLevelPressureHpa = STANDARD_SEA_LEVEL_PRESSURE_HPA) {
   const altitudeMeters = 44330 * (1 - Math.pow(pressureHpa / seaLevelPressureHpa, 1 / 5.255));
   return altitudeMeters * METERS_TO_FEET;
@@ -201,6 +205,9 @@ function smoothSeries(points) {
 }
 
 function displayMetric(metric, rawValue, rawUnit) {
+  if (metric === "temperature") {
+    return { label: FRIENDLY_LABELS[metric], value: celsiusToFahrenheit(Number(rawValue)), unit: "F", digits: 1 };
+  }
   if (metric === "pressure") {
     return { label: FRIENDLY_LABELS[metric], value: pressureToInHg(Number(rawValue)), unit: "inHg", digits: 2 };
   }
@@ -389,7 +396,7 @@ function drawCharts(items) {
 
   const smoothingLabel = isSmoothingEnabled() ? `, MA ${smoothingWindowSize()}` : "";
   const luminanceData = sortedSeries(items, "light_intensity");
-  const temperatureData = sortedSeries(items, "temperature", (value) => (Number(value) * 9) / 5 + 32);
+  const temperatureData = sortedSeries(items, "temperature", (value) => celsiusToFahrenheit(Number(value)));
   const humidityData = sortedSeries(items, "humidity");
   const pressureData = sortedSeries(items, "pressure", (value) => pressureToInHg(Number(value)));
 
@@ -597,4 +604,5 @@ syncResponsiveState(false);
 loadDashboard().catch((error) => {
   plotsCaption.textContent = error.message;
 });
+
 
