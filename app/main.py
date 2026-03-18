@@ -63,6 +63,8 @@ async def events() -> StreamingResponse:
                     )
                 except TimeoutError:
                     yield "event: ping\ndata: {}\n\n"
+                except asyncio.CancelledError:
+                    break
         finally:
             poller.unsubscribe(queue)
 

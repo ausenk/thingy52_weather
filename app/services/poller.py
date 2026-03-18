@@ -59,8 +59,14 @@ class Poller:
         if self._task is None:
             return
         self._stop_event.set()
-        await self._task
-        self._task = None
+        try:
+            await asyncio.wait_for(self._task, timeout=3)
+        except TimeoutError:
+            self._task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._task
+        finally:
+            self._task = None
 
     def subscribe(self) -> asyncio.Queue[dict[str, Any]]:
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -118,17 +124,23 @@ class Poller:
                 raise
 
     async def _run(self) -> None:
-        while not self._stop_event.is_set():
-            try:
-                count = await self.poll_once()
-                logger.info("Stored %s measurements", count)
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Polling failed: %s", exc)
+        try:
+            while not self._stop_event.is_set():
+                try:
+                    count = await self.poll_once()
+                    logger.info("Stored %s measurements", count)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:  # pragma: no cover
+                    logger.exception("Polling failed: %s", exc)
 
-            try:
-                await asyncio.wait_for(
-                    self._stop_event.wait(),
-                    timeout=self.settings.poll_interval_seconds,
-                )
-            except TimeoutError:
-                continue
+                try:
+                    await asyncio.wait_for(
+                        self._stop_event.wait(),
+                        timeout=self.settings.poll_interval_seconds,
+                    )
+                except TimeoutError:
+                    continue
+        except asyncio.CancelledError:
+            logger.info("Poller task cancelled during shutdown")
+            raise

@@ -79,18 +79,13 @@
       <section class="trend-workspace">
         <div class="panel-header">
           <div>
-            <h2>Trend</h2>
-            <p>Select a metric and time range.</p>
+            <h2>Plots</h2>
+            <p>Shared time range with fixed environmental views.</p>
           </div>
-          <p id="chart-caption">No data loaded yet.</p>
+          <p id="plots-caption">No data loaded yet.</p>
         </div>
 
         <div class="trend-controls">
-          <div>
-            <span class="status-label">Metric</span>
-            <div id="metric-chip-group" class="chip-group"></div>
-            <select id="metric-select" class="visually-hidden"></select>
-          </div>
           <div>
             <span class="status-label">Quick range</span>
             <div class="chip-group" id="window-chip-group">
@@ -109,9 +104,40 @@
               <option value="168">Last 7 days</option>
             </select>
           </label>
+          <div class="smoothing-controls">
+            <label class="toggle-inline" for="smoothing-toggle">
+              <input id="smoothing-toggle" type="checkbox" />
+              <span>Smoothed</span>
+            </label>
+            <label class="window-select-wrap smoothing-window-wrap">
+              <span class="status-label">Window</span>
+              <input id="smoothing-window" type="number" min="1" max="25" step="1" value="5" />
+            </label>
+          </div>
         </div>
 
-        <canvas id="chart" width="960" height="320"></canvas>
+        <div class="plot-stack">
+          <section class="plot-card">
+            <div class="plot-header">
+              <h3>Luminance</h3>
+            </div>
+            <canvas id="luminance-chart" width="960" height="220"></canvas>
+          </section>
+
+          <section class="plot-card">
+            <div class="plot-header">
+              <h3>Temperature</h3>
+            </div>
+            <canvas id="temperature-chart" width="960" height="220"></canvas>
+          </section>
+
+          <section class="plot-card">
+            <div class="plot-header">
+              <h3>Humidity and Pressure</h3>
+            </div>
+            <canvas id="humidity-pressure-chart" width="960" height="240"></canvas>
+          </section>
+        </div>
       </section>
 
       <details class="table-panel" open>
