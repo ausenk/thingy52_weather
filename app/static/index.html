@@ -12,16 +12,17 @@
         <div class="hero-copy-block">
           <p class="eyebrow">Sensor Dashboard</p>
           <h1>Thingy:52</h1>
-          <p class="hero-copy">
-            Live conditions, device status, and recent history.
-          </p>
+          <p class="hero-copy">Live conditions, device status, and recent history.</p>
         </div>
       </section>
 
       <section class="status-panel">
         <div class="status-card status-card-primary">
           <div class="panel-header">
-            <h2>Device Status</h2>
+            <div>
+              <h2>Device Status</h2>
+              <p>Connection and recent collection activity.</p>
+            </div>
             <p id="connection-status">Loading device status...</p>
           </div>
           <div class="status-grid">
@@ -52,6 +53,7 @@
           </div>
           <p id="connection-error" class="connection-error hidden"></p>
         </div>
+
         <div class="status-card battery-card">
           <p class="mode-label">Battery</p>
           <div class="battery-value-row">
@@ -77,16 +79,16 @@
       </section>
 
       <section class="trend-workspace">
-        <div class="panel-header">
+        <div class="panel-header trend-header">
           <div>
             <h2>Plots</h2>
-            <p>Shared time range with fixed environmental views.</p>
+            <p>Three fixed views with a shared time range.</p>
           </div>
           <p id="plots-caption">No data loaded yet.</p>
         </div>
 
         <div class="trend-controls">
-          <div>
+          <section class="controls-card controls-card-wide">
             <span class="status-label">Quick range</span>
             <div class="chip-group" id="window-chip-group">
               <button class="chip" data-hours="1" type="button">1h</button>
@@ -94,26 +96,30 @@
               <button class="chip is-active" data-hours="24" type="button">24h</button>
               <button class="chip" data-hours="168" type="button">7d</button>
             </div>
-          </div>
-          <label class="window-select-wrap">
-            <span class="status-label">Exact window</span>
-            <select id="window-select">
-              <option value="1">Last hour</option>
-              <option value="6">Last 6 hours</option>
-              <option value="24" selected>Last 24 hours</option>
-              <option value="168">Last 7 days</option>
-            </select>
-          </label>
-          <div class="smoothing-controls">
+          </section>
+
+          <section class="controls-card">
+            <label class="window-select-wrap" for="window-select">
+              <span class="status-label">Exact window</span>
+              <select id="window-select">
+                <option value="1">Last hour</option>
+                <option value="6">Last 6 hours</option>
+                <option value="24" selected>Last 24 hours</option>
+                <option value="168">Last 7 days</option>
+              </select>
+            </label>
+          </section>
+
+          <section class="controls-card smoothing-controls">
             <label class="toggle-inline" for="smoothing-toggle">
               <input id="smoothing-toggle" type="checkbox" />
               <span>Smoothed</span>
             </label>
-            <label class="window-select-wrap smoothing-window-wrap">
+            <label class="window-select-wrap smoothing-window-wrap" for="smoothing-window">
               <span class="status-label">Window</span>
               <input id="smoothing-window" type="number" min="1" max="25" step="1" value="5" />
             </label>
-          </div>
+          </section>
         </div>
 
         <div class="plot-stack">
@@ -121,26 +127,32 @@
             <div class="plot-header">
               <h3>Luminance</h3>
             </div>
-            <canvas id="luminance-chart" width="960" height="220"></canvas>
+            <div class="chart-shell chart-shell-standard">
+              <canvas id="luminance-chart"></canvas>
+            </div>
           </section>
 
           <section class="plot-card">
             <div class="plot-header">
               <h3>Temperature</h3>
             </div>
-            <canvas id="temperature-chart" width="960" height="220"></canvas>
+            <div class="chart-shell chart-shell-standard">
+              <canvas id="temperature-chart"></canvas>
+            </div>
           </section>
 
           <section class="plot-card">
             <div class="plot-header">
               <h3>Humidity and Pressure</h3>
             </div>
-            <canvas id="humidity-pressure-chart" width="960" height="240"></canvas>
+            <div class="chart-shell chart-shell-tall">
+              <canvas id="humidity-pressure-chart"></canvas>
+            </div>
           </section>
         </div>
       </section>
 
-      <details class="table-panel" open>
+      <details id="samples-panel" class="table-panel" open>
         <summary class="table-summary">
           <span>
             <strong>Recent samples</strong>

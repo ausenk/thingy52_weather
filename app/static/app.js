@@ -13,6 +13,7 @@ const DAYLIGHT_END_HOUR = 18;
 const STANDARD_SEA_LEVEL_PRESSURE_HPA = 1013.25;
 const HPA_TO_INHG = 0.0295299830714;
 const METERS_TO_FEET = 3.28084;
+const MOBILE_LAYOUT_QUERY = "(max-width: 720px)";
 
 const windowSelect = document.querySelector("#window-select");
 const smoothingToggle = document.querySelector("#smoothing-toggle");
@@ -36,6 +37,8 @@ const plotsCaption = document.querySelector("#plots-caption");
 const luminanceCanvas = document.querySelector("#luminance-chart");
 const temperatureCanvas = document.querySelector("#temperature-chart");
 const humidityPressureCanvas = document.querySelector("#humidity-pressure-chart");
+const samplesPanel = document.querySelector("#samples-panel");
+const mobileLayout = window.matchMedia(MOBILE_LAYOUT_QUERY);
 
 let luminanceChart = null;
 let temperatureChart = null;
@@ -44,6 +47,7 @@ let latestPollerStatus = null;
 let liveEvents = null;
 let reloadTimer = null;
 let dashboardLoadInFlight = null;
+let lastResponsiveMode = null;
 
 const dayNightPlugin = {
   id: "dayNightBackground",
@@ -118,7 +122,7 @@ const freezingLinePlugin = {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(248, 113, 113, 0.95)";
-    ctx.font = "12px Segoe UI";
+    ctx.font = isMobileLayout() ? "11px Segoe UI" : "12px Segoe UI";
     ctx.textAlign = "right";
     ctx.fillText("32 F", chartArea.right - 8, y - 6);
     ctx.restore();
@@ -140,8 +144,19 @@ async function fetchJson(url, options = {}) {
   return payload;
 }
 
+function isMobileLayout() {
+  return mobileLayout.matches;
+}
+
 function formatTime(value) {
   return new Date(value).toLocaleString();
+}
+
+function formatAxisTime(value) {
+  const date = new Date(Number(value));
+  return isMobileLayout()
+    ? date.toLocaleTimeString([], { hour: "numeric" })
+    : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 function pressureToInHg(valueHpa) {
@@ -297,27 +312,46 @@ async function loadPollerStatus() {
 }
 
 function destroyChart(chart) {
-  if (chart) chart.destroy();
+  if (chart) {
+    chart.destroy();
+  }
 }
 
 function baseChartOptions() {
+  const mobile = isMobileLayout();
   return {
     responsive: true,
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
     parsing: false,
     normalized: true,
     animation: false,
     transitions: { active: { animation: { duration: 0 } } },
     interaction: { mode: "nearest", intersect: false },
+    layout: { padding: { top: 8, right: mobile ? 8 : 10, bottom: mobile ? 4 : 8, left: mobile ? 4 : 8 } },
+    elements: {
+      line: { tension: 0.2, borderWidth: mobile ? 1.75 : 2 },
+      point: { radius: mobile ? 0 : 1.5, hitRadius: mobile ? 10 : 8, hoverRadius: mobile ? 3 : 4 },
+    },
     plugins: {
       legend: {
         display: true,
         position: "bottom",
         align: "end",
-        labels: { color: "#cbd5e1", usePointStyle: true, boxWidth: 10, boxHeight: 10 },
+        labels: {
+          color: "#cbd5e1",
+          usePointStyle: true,
+          boxWidth: mobile ? 8 : 10,
+          boxHeight: mobile ? 8 : 10,
+          padding: mobile ? 12 : 16,
+          font: { size: mobile ? 11 : 12 },
+        },
       },
       tooltip: {
-        callbacks: { title(context) { return formatTime(context[0].parsed.x); } },
+        callbacks: {
+          title(context) {
+            return formatTime(context[0].parsed.x);
+          },
+        },
       },
     },
     scales: {
@@ -325,9 +359,9 @@ function baseChartOptions() {
         type: "linear",
         ticks: {
           color: "#9aa4b2",
-          maxTicksLimit: 6,
+          maxTicksLimit: mobile ? 4 : 6,
           callback(value) {
-            return new Date(Number(value)).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+            return formatAxisTime(value);
           },
         },
         grid: { color: "rgba(148, 163, 184, 0.12)" },
@@ -362,13 +396,21 @@ function drawCharts(items) {
   if (luminanceData.length) {
     const options = baseChartOptions();
     options.scales.y = {
-      ticks: { color: "#9aa4b2" },
+      ticks: { color: "#9aa4b2", maxTicksLimit: isMobileLayout() ? 4 : 6 },
       grid: { color: "rgba(148, 163, 184, 0.12)" },
       title: { display: true, text: "Counts", color: "#9aa4b2" },
     };
     luminanceChart = new Chart(luminanceCanvas, {
       type: "line",
-      data: { datasets: [{ label: `Luminance${smoothingLabel}`, data: luminanceData, borderColor: "#fde68a", backgroundColor: "rgba(253, 230, 138, 0.16)", pointRadius: 1.5, borderWidth: 2, tension: 0.2, fill: false }] },
+      data: {
+        datasets: [{
+          label: `Luminance${smoothingLabel}`,
+          data: luminanceData,
+          borderColor: "#fde68a",
+          backgroundColor: "rgba(253, 230, 138, 0.16)",
+          fill: false,
+        }],
+      },
       options,
     });
   }
@@ -376,13 +418,23 @@ function drawCharts(items) {
   if (temperatureData.length) {
     const options = baseChartOptions();
     options.scales.y = {
-      ticks: { color: "#9aa4b2" },
+      min: 0,
+      max: 100,
+      ticks: { color: "#9aa4b2", maxTicksLimit: isMobileLayout() ? 4 : 6 },
       grid: { color: "rgba(148, 163, 184, 0.12)" },
       title: { display: true, text: "Temperature (F)", color: "#9aa4b2" },
     };
     temperatureChart = new Chart(temperatureCanvas, {
       type: "line",
-      data: { datasets: [{ label: `Temperature (F)${smoothingLabel}`, data: temperatureData, borderColor: "#f97316", backgroundColor: "rgba(249, 115, 22, 0.16)", pointRadius: 1.5, borderWidth: 2, tension: 0.2, fill: false }] },
+      data: {
+        datasets: [{
+          label: `Temperature (F)${smoothingLabel}`,
+          data: temperatureData,
+          borderColor: "#f97316",
+          backgroundColor: "rgba(249, 115, 22, 0.16)",
+          fill: false,
+        }],
+      },
       options,
     });
   }
@@ -392,14 +444,18 @@ function drawCharts(items) {
     options.scales.yHumidity = {
       type: "linear",
       position: "left",
-      ticks: { color: "#9aa4b2" },
+      min: 0,
+      max: 100,
+      ticks: { color: "#9aa4b2", maxTicksLimit: isMobileLayout() ? 4 : 6 },
       grid: { color: "rgba(148, 163, 184, 0.12)" },
       title: { display: true, text: "Humidity (%)", color: "#9aa4b2" },
     };
     options.scales.yPressure = {
       type: "linear",
       position: "right",
-      ticks: { color: "#9aa4b2" },
+      min: 27,
+      max: 31,
+      ticks: { color: "#9aa4b2", maxTicksLimit: isMobileLayout() ? 4 : 6 },
       grid: { drawOnChartArea: false },
       title: { display: true, text: "Pressure (inHg)", color: "#9aa4b2" },
     };
@@ -407,8 +463,22 @@ function drawCharts(items) {
       type: "line",
       data: {
         datasets: [
-          { label: `Humidity${smoothingLabel}`, data: humidityData, yAxisID: "yHumidity", borderColor: "#38bdf8", backgroundColor: "rgba(56, 189, 248, 0.16)", pointRadius: 1.5, borderWidth: 2, tension: 0.2, fill: false },
-          { label: `Pressure (inHg)${smoothingLabel}`, data: pressureData, yAxisID: "yPressure", borderColor: "#a78bfa", backgroundColor: "rgba(167, 139, 250, 0.16)", pointRadius: 1.5, borderWidth: 2, tension: 0.2, fill: false },
+          {
+            label: `Humidity${smoothingLabel}`,
+            data: humidityData,
+            yAxisID: "yHumidity",
+            borderColor: "#38bdf8",
+            backgroundColor: "rgba(56, 189, 248, 0.16)",
+            fill: false,
+          },
+          {
+            label: `Pressure (inHg)${smoothingLabel}`,
+            data: pressureData,
+            yAxisID: "yPressure",
+            borderColor: "#a78bfa",
+            backgroundColor: "rgba(167, 139, 250, 0.16)",
+            fill: false,
+          },
         ],
       },
       options,
@@ -420,8 +490,22 @@ function drawCharts(items) {
   plotsCaption.textContent = totalPoints ? `${totalPoints} points in the selected time range${suffix}` : "No data loaded yet.";
 }
 
+function syncResponsiveState(forceRedraw = false) {
+  const mobile = isMobileLayout();
+  if (lastResponsiveMode === null) {
+    samplesPanel.open = !mobile;
+  }
+
+  if (forceRedraw || lastResponsiveMode !== mobile) {
+    lastResponsiveMode = mobile;
+    scheduleDashboardReload(0);
+  }
+}
+
 async function loadDashboard() {
-  if (dashboardLoadInFlight) return dashboardLoadInFlight;
+  if (dashboardLoadInFlight) {
+    return dashboardLoadInFlight;
+  }
 
   dashboardLoadInFlight = (async () => {
     syncWindowChips();
@@ -449,7 +533,9 @@ async function loadDashboard() {
 }
 
 function scheduleDashboardReload(delay = 200) {
-  if (reloadTimer) window.clearTimeout(reloadTimer);
+  if (reloadTimer) {
+    window.clearTimeout(reloadTimer);
+  }
   reloadTimer = window.setTimeout(() => {
     reloadTimer = null;
     loadDashboard().catch((error) => {
@@ -459,7 +545,9 @@ function scheduleDashboardReload(delay = 200) {
 }
 
 function connectLiveUpdates() {
-  if (liveEvents) liveEvents.close();
+  if (liveEvents) {
+    liveEvents.close();
+  }
   liveEvents = new EventSource("/api/events");
   liveEvents.addEventListener("measurement", () => scheduleDashboardReload(100));
   liveEvents.addEventListener("poller", () => scheduleDashboardReload(100));
@@ -470,7 +558,9 @@ function connectLiveUpdates() {
 
 windowChipGroup.addEventListener("click", (event) => {
   const chip = event.target.closest(".chip[data-hours]");
-  if (!chip) return;
+  if (!chip) {
+    return;
+  }
   windowSelect.value = chip.dataset.hours;
   syncWindowChips();
   loadDashboard().catch((error) => {
@@ -498,7 +588,13 @@ smoothingWindowInput.addEventListener("input", () => {
   });
 });
 
+mobileLayout.addEventListener("change", () => {
+  syncResponsiveState(true);
+});
+
 connectLiveUpdates();
+syncResponsiveState(false);
 loadDashboard().catch((error) => {
   plotsCaption.textContent = error.message;
 });
+

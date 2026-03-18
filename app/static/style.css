@@ -168,12 +168,30 @@ body {
   line-height: 1.05;
 }
 
+.trend-header {
+  align-items: flex-start;
+}
+
 .trend-controls {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(0, 1.4fr) minmax(160px, 220px) minmax(220px, 280px);
-  align-items: end;
+  grid-template-columns: minmax(0, 1.4fr) minmax(180px, 220px) minmax(220px, 280px);
+  align-items: stretch;
   margin: 1rem 0 1.25rem;
+}
+
+.controls-card {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid var(--stroke);
+}
+
+.controls-card-wide {
+  min-width: 0;
 }
 
 .chip-group {
@@ -255,6 +273,21 @@ select {
   font-weight: 600;
 }
 
+.chart-shell {
+  position: relative;
+  width: 100%;
+}
+
+.chart-shell-standard {
+  min-height: 260px;
+  height: 260px;
+}
+
+.chart-shell-tall {
+  min-height: 300px;
+  height: 300px;
+}
+
 .eyebrow {
   margin: 0 0 0.4rem;
   color: var(--muted);
@@ -284,8 +317,8 @@ h2 {
 }
 
 canvas {
-  width: 100%;
-  height: auto;
+  width: 100% !important;
+  height: 100% !important;
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(17, 24, 39, 0.96));
 }
@@ -335,26 +368,126 @@ tbody tr:hover {
   .trend-controls {
     grid-template-columns: 1fr 1fr;
   }
+
+  .controls-card-wide {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 820px) {
   .status-panel {
     grid-template-columns: 1fr;
   }
+
+  .conditions-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
+  .layout {
+    width: min(100% - 1rem, 1180px);
+    padding-bottom: 2rem;
+  }
+
+  .hero,
+  .conditions-panel,
+  .trend-workspace,
+  .status-card {
+    border-radius: 18px;
+  }
+
+  .hero,
+  .conditions-panel,
+  .trend-workspace,
+  .status-card,
+  .table-summary,
+  .table-wrap {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
   .panel-header,
-  .trend-controls {
+  .trend-header {
     flex-direction: column;
     align-items: stretch;
   }
 
+  .status-grid,
+  .conditions-grid,
   .trend-controls {
-    display: flex;
+    grid-template-columns: 1fr;
   }
 
+  .conditions-grid {
+    gap: 0.75rem;
+  }
+
+  .condition-card {
+    padding: 0.95rem;
+  }
+
+  .condition-value {
+    font-size: 1.8rem;
+  }
+
+  .controls-card {
+    padding: 0.85rem 0.9rem;
+  }
+
+  .chip-group {
+    gap: 0.45rem;
+  }
+
+  .chip {
+    min-height: 40px;
+    padding: 0.45rem 0.75rem;
+  }
+
+  .plot-card {
+    padding: 0.85rem;
+  }
+
+  .chart-shell-standard {
+    min-height: 320px;
+    height: 320px;
+  }
+
+  .chart-shell-tall {
+    min-height: 360px;
+    height: 360px;
+  }
+
+  th,
+  td {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
   .layout {
-    width: min(100% - 1rem, 1180px);
+    width: calc(100% - 0.75rem);
+  }
+
+  .hero,
+  .conditions-panel,
+  .trend-workspace,
+  .status-card {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  #battery-level {
+    font-size: 2rem;
+  }
+
+  .chart-shell-standard {
+    min-height: 290px;
+    height: 290px;
+  }
+
+  .chart-shell-tall {
+    min-height: 330px;
+    height: 330px;
   }
 }
