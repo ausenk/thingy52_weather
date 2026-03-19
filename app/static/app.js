@@ -512,8 +512,8 @@ function drawCharts(measurements, forecastItems) {
     options.scales.yPressure = {
       type: "linear",
       position: "right",
-      min: 27,
-      max: 31,
+      min: 29.5,
+      max: 30.5,
       ticks: { color: "#9aa4b2", maxTicksLimit: isMobileLayout() ? 4 : 6 },
       grid: { drawOnChartArea: false },
       title: { display: true, text: "Pressure (inHg)", color: "#9aa4b2" },
