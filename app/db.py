@@ -83,6 +83,12 @@ class Database:
                 ON forecast_measurements(location_key, fetched_at)
                 """
             )
+            connection.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_forecast_unique_snapshot
+                ON forecast_measurements(location_key, metric, valid_at, fetched_at)
+                """
+            )
             connection.commit()
 
     def insert_measurements(self, measurements: list[Measurement]) -> None:
@@ -115,42 +121,47 @@ class Database:
             )
             connection.commit()
 
-    def replace_forecast_measurements(
+    def insert_forecast_measurements(
         self,
         location_key: str,
         measurements: list[ForecastMeasurement],
+        retention_days: int = 21,
     ) -> None:
+        if not measurements:
+            return
+
+        prune_before = (datetime.now(timezone.utc) - timedelta(days=retention_days)).isoformat()
+
         with self.connect() as connection:
-            connection.execute(
-                "DELETE FROM forecast_measurements WHERE location_key = ?",
-                (location_key,),
+            connection.executemany(
+                """
+                INSERT OR IGNORE INTO forecast_measurements (
+                    location_key,
+                    metric,
+                    value,
+                    unit,
+                    valid_at,
+                    fetched_at,
+                    source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        item.location_key,
+                        item.metric,
+                        item.value,
+                        item.unit,
+                        item.valid_at.isoformat(),
+                        item.fetched_at.isoformat(),
+                        item.source,
+                    )
+                    for item in measurements
+                ],
             )
-            if measurements:
-                connection.executemany(
-                    """
-                    INSERT INTO forecast_measurements (
-                        location_key,
-                        metric,
-                        value,
-                        unit,
-                        valid_at,
-                        fetched_at,
-                        source
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    [
-                        (
-                            item.location_key,
-                            item.metric,
-                            item.value,
-                            item.unit,
-                            item.valid_at.isoformat(),
-                            item.fetched_at.isoformat(),
-                            item.source,
-                        )
-                        for item in measurements
-                    ],
-                )
+            connection.execute(
+                "DELETE FROM forecast_measurements WHERE location_key = ? AND valid_at < ?",
+                (location_key, prune_before),
+            )
             connection.commit()
 
     def fetch_latest(self) -> list[dict[str, object]]:
@@ -205,27 +216,45 @@ class Database:
         self,
         location_key: str,
         metrics: list[str] | None = None,
-        hours_ahead: int = 168,
+        hours: int = 168,
+        mode: str = "future",
         limit: int = 5000,
     ) -> list[dict[str, object]]:
         now = datetime.now(timezone.utc)
-        until = now + timedelta(hours=hours_ahead)
-        query = """
-            SELECT metric, value, unit, valid_at, fetched_at, source
-            FROM forecast_measurements
-            WHERE location_key = ?
-              AND valid_at >= ?
-              AND valid_at <= ?
-        """
-        params: list[object] = [location_key, now.isoformat(), until.isoformat()]
+        if mode == "compare":
+            window_start = now - timedelta(hours=hours)
+            window_end = now
+        else:
+            window_start = now
+            window_end = now + timedelta(hours=hours)
 
+        metric_filter = ""
+        params: list[object] = [location_key, window_start.isoformat(), window_end.isoformat()]
         if metrics:
             placeholders = ", ".join("?" for _ in metrics)
-            query += f" AND metric IN ({placeholders})"
+            metric_filter = f" AND metric IN ({placeholders})"
             params.extend(metrics)
 
-        query += " ORDER BY valid_at ASC LIMIT ?"
-        params.append(limit)
+        query = f"""
+            SELECT latest.metric, latest.value, latest.unit, latest.valid_at, latest.fetched_at, latest.source
+            FROM forecast_measurements latest
+            JOIN (
+                SELECT metric, valid_at, MAX(fetched_at) AS max_fetched_at
+                FROM forecast_measurements
+                WHERE location_key = ?
+                  AND valid_at >= ?
+                  AND valid_at <= ?
+                  {metric_filter}
+                GROUP BY metric, valid_at
+            ) selected
+            ON latest.metric = selected.metric
+            AND latest.valid_at = selected.valid_at
+            AND latest.fetched_at = selected.max_fetched_at
+            WHERE latest.location_key = ?
+            ORDER BY latest.valid_at ASC
+            LIMIT ?
+        """
+        params.extend([location_key, limit])
 
         with self.connect() as connection:
             return connection.execute(query, params).fetchall()

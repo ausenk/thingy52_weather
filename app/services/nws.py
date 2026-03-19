@@ -28,29 +28,34 @@ class NwsForecastService:
     def payload(
         self,
         items: list[dict[str, object]],
+        mode: str,
     ) -> dict[str, object]:
+        last_fetched = (
+            self.database.latest_forecast_fetched_at(self.location_key)
+            if self.location_key
+            else None
+        )
+        available_until = (
+            self.database.latest_forecast_valid_at(self.location_key)
+            if self.location_key
+            else None
+        )
         return {
             "configured": self.is_configured,
             "location_key": self.location_key,
             "latitude": self.settings.nws_latitude,
             "longitude": self.settings.nws_longitude,
+            "mode": mode,
             "items": items,
-            "last_fetched_at": (
-                self.database.latest_forecast_fetched_at(self.location_key).isoformat()
-                if self.location_key and self.database.latest_forecast_fetched_at(self.location_key)
-                else None
-            ),
-            "available_until": (
-                self.database.latest_forecast_valid_at(self.location_key).isoformat()
-                if self.location_key and self.database.latest_forecast_valid_at(self.location_key)
-                else None
-            ),
+            "last_fetched_at": last_fetched.isoformat() if last_fetched else None,
+            "available_until": available_until.isoformat() if available_until else None,
         }
 
     async def get_forecast(
         self,
         metrics: list[str] | None,
-        hours_ahead: int,
+        hours: int,
+        mode: str,
     ) -> dict[str, object]:
         if not self.is_configured or self.location_key is None:
             return {
@@ -58,6 +63,7 @@ class NwsForecastService:
                 "location_key": None,
                 "latitude": self.settings.nws_latitude,
                 "longitude": self.settings.nws_longitude,
+                "mode": mode,
                 "items": [],
                 "last_fetched_at": None,
                 "available_until": None,
@@ -67,9 +73,10 @@ class NwsForecastService:
         items = self.database.fetch_forecast_measurements(
             location_key=self.location_key,
             metrics=metrics,
-            hours_ahead=hours_ahead,
+            hours=hours,
+            mode=mode,
         )
-        return self.payload(items)
+        return self.payload(items, mode)
 
     async def ensure_fresh(self) -> None:
         if self.location_key is None:
@@ -103,7 +110,7 @@ class NwsForecastService:
         if not measurements:
             raise RuntimeError("NWS forecast response did not contain usable forecast values.")
 
-        self.database.replace_forecast_measurements(self.location_key, measurements)
+        self.database.insert_forecast_measurements(self.location_key, measurements)
         return len(measurements)
 
     def _fetch_json(self, url: str) -> dict[str, Any]:
@@ -211,4 +218,3 @@ class NwsForecastService:
         if lowered.endswith(":pa") or lowered.endswith("/pa") or lowered == "pa":
             return value / 100.0
         return value
-

@@ -563,7 +563,8 @@ async function loadDashboard() {
 
     if (selectedMode !== "past") {
       const forecastParams = new URLSearchParams();
-      forecastParams.set("hours_ahead", String(selectedHours));
+      forecastParams.set("hours", String(selectedHours));
+      forecastParams.set("mode", selectedMode === "compare" ? "compare" : "future");
       ["temperature", "humidity", "pressure"].forEach((metric) => {
         forecastParams.append("metric", metric);
       });
@@ -651,4 +652,5 @@ syncResponsiveState(false);
 loadDashboard().catch((error) => {
   showDashboardError(error.message);
 });
+
 

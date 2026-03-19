@@ -122,9 +122,11 @@ async def measurements(
 @app.get("/api/forecast")
 async def forecast(
     metric: list[str] = Query(default=[]),
-    hours_ahead: int = Query(default=168, ge=1, le=24 * 10),
+    hours: int = Query(default=168, ge=1, le=24 * 10),
+    mode: str = Query(default="future", pattern="^(future|compare)$"),
 ) -> dict[str, object]:
     try:
-        return await weather_service.get_forecast(metric or None, hours_ahead)
+        return await weather_service.get_forecast(metric or None, hours, mode)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
