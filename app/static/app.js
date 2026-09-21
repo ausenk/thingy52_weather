@@ -155,8 +155,13 @@ function formatTime(value) {
   return new Date(value).toLocaleString();
 }
 
-function formatAxisTime(value) {
+function formatAxisTime(value, rangeHours = null) {
   const date = new Date(Number(value));
+
+  if (rangeHours !== null && rangeHours > 24) {
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+  }
+
   return isMobileLayout()
     ? date.toLocaleTimeString([], { hour: "numeric" })
     : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -449,7 +454,7 @@ function baseChartOptions() {
           color: "#9aa4b2",
           maxTicksLimit: mobile ? 4 : 6,
           callback(value) {
-            return formatAxisTime(value);
+            return formatAxisTime(value, selectedHours);
           },
         },
         grid: { color: "rgba(148, 163, 184, 0.12)" },
