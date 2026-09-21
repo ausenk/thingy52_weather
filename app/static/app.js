@@ -540,6 +540,7 @@ function drawCharts(measurements, forecastItems) {
   const showForecast = selectedMode !== "past";
 
   if (showActual && actualLuminance.length) {
+    const luminanceBounds = calculateAxisBounds(actualLuminance, 0, null, 0.18, 10);
     const options = baseChartOptions();
     const xBounds = calculateTimeAxisBounds(actualLuminance);
     options.scales.x = {
@@ -548,6 +549,8 @@ function drawCharts(measurements, forecastItems) {
       max: xBounds.max,
     };
     options.scales.y = {
+      min: luminanceBounds.min,
+      max: luminanceBounds.max,
       ticks: { color: "#9aa4b2", maxTicksLimit: isMobileLayout() ? 4 : 6 },
       grid: { color: "rgba(148, 163, 184, 0.12)" },
       title: { display: true, text: "Counts", color: "#9aa4b2" },
