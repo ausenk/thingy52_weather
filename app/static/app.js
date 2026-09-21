@@ -27,6 +27,8 @@ const batteryLevel = document.querySelector("#battery-level");
 const batteryFill = document.querySelector("#battery-fill");
 const batteryTime = document.querySelector("#battery-time");
 const conditionsCards = document.querySelector("#conditions-cards");
+const weatherSummary = document.querySelector("#weather-summary");
+const statusBanner = document.querySelector("#status-banner");
 const windowChipGroup = document.querySelector("#window-chip-group");
 const modeChipGroup = document.querySelector("#mode-chip-group");
 const trendWorkspace = document.querySelector("#trend-workspace");
@@ -172,8 +174,22 @@ function estimateAltitudeFeet(pressureHpa, seaLevelPressureHpa = STANDARD_SEA_LE
   return altitudeMeters * METERS_TO_FEET;
 }
 
+function formatConnectionMessage(message) {
+  const normalized = (message || "").toLowerCase();
+
+  if (normalized.includes("bluetooth") && (normalized.includes("turned on") || normalized.includes("off") || normalized.includes("disabled"))) {
+    return "Bluetooth is turned off. Turn on Bluetooth and retry.";
+  }
+
+  if (normalized.includes("thingy:52 was not discoverable") || normalized.includes("not discoverable")) {
+    return "Thingy:52 is not discoverable. Check that the device is on and advertising.";
+  }
+
+  return message || "Connection error.";
+}
+
 function showDashboardError(message) {
-  connectionError.textContent = message;
+  connectionError.textContent = formatConnectionMessage(message);
   connectionError.classList.remove("hidden");
 }
 
@@ -183,6 +199,68 @@ function clearDashboardError() {
   }
   connectionError.textContent = "";
   connectionError.classList.add("hidden");
+}
+
+function getLatestMetricValue(items, metric) {
+  const match = items.find((item) => item.metric === metric);
+  if (!match) {
+    return null;
+  }
+  return displayMetric(metric, match.value, match.unit);
+}
+
+function updateWeatherSummary(items) {
+  if (!weatherSummary) {
+    return;
+  }
+
+  const temperature = getLatestMetricValue(items, "temperature");
+  const humidity = getLatestMetricValue(items, "humidity");
+
+  if (temperature) {
+    const value = temperature.value.toFixed(temperature.digits);
+    const humidityText = humidity ? ` • ${humidity.value.toFixed(humidity.digits)}${humidity.unit}` : "";
+    weatherSummary.innerHTML = `
+      <div class="summary-temp">${value}°${temperature.unit}</div>
+      <div class="summary-meta">${humidity ? `Humidity ${humidity.value.toFixed(humidity.digits)}${humidity.unit}` : "Waiting for humidity"}${humidityText}</div>
+    `;
+    return;
+  }
+
+  weatherSummary.innerHTML = `
+    <div class="summary-temp">--°F</div>
+    <div class="summary-meta">Waiting for data…</div>
+  `;
+}
+
+function updateStatusBanner(status) {
+  if (!statusBanner) {
+    return;
+  }
+
+  if (status?.last_error) {
+    statusBanner.dataset.level = "error";
+    statusBanner.textContent = `Sensor disconnected: ${formatConnectionMessage(status.last_error)}`;
+    return;
+  }
+
+  if (!status?.last_success_at) {
+    statusBanner.dataset.level = "warning";
+    statusBanner.textContent = "Waiting for first successful sensor reading.";
+    return;
+  }
+
+  const lastSuccessDate = new Date(status.last_success_at);
+  const ageMinutes = (Date.now() - lastSuccessDate.getTime()) / 60000;
+
+  if (ageMinutes <= 5) {
+    statusBanner.dataset.level = "ok";
+    statusBanner.textContent = `Live • updated ${lastSuccessDate.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+    return;
+  }
+
+  statusBanner.dataset.level = "warning";
+  statusBanner.textContent = `Stale reading • last updated ${lastSuccessDate.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`;
 }
 
 function displayMetric(metric, rawValue, rawUnit) {
@@ -243,6 +321,8 @@ function renderCurrentConditions(items) {
     `;
     conditionsCards.appendChild(card);
   });
+
+  updateWeatherSummary(items);
 }
 
 function renderTable(items) {
@@ -275,6 +355,8 @@ function updateThingyStatus(status, latestItems) {
   lastSuccess.textContent = status.last_success_at ? formatTime(status.last_success_at) : "No successful poll yet";
   lastPoll.textContent = status.last_poll_at ? formatTime(status.last_poll_at) : "No poll attempted yet";
   lastResult.textContent = status.last_measurement_count ? `${status.last_measurement_count} samples stored` : "No measurements stored yet";
+
+  updateStatusBanner(status);
 
   if (status.last_error) {
     connectionStatus.textContent = "Needs attention";
@@ -376,6 +458,23 @@ function sortedForecastSeries(items, metric, transform = (value) => Number(value
     .map((item) => ({ x: new Date(item.valid_at).getTime(), y: transform(item.value) }));
 }
 
+function calculateAxisBounds(series, fallbackMin, fallbackMax, bufferFactor = 0.12, minimumPad = 2) {
+  if (!series.length) {
+    return { min: fallbackMin, max: fallbackMax };
+  }
+
+  const values = series.map((point) => Number(point.y));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const spread = Math.max(max - min, minimumPad);
+  const pad = Math.max(spread * bufferFactor, minimumPad);
+
+  return {
+    min: Number.isFinite(fallbackMin) ? Math.min(min - pad, fallbackMin) : min - pad,
+    max: Number.isFinite(fallbackMax) ? Math.max(max + pad, fallbackMax) : max + pad,
+  };
+}
+
 function drawCharts(measurements, forecastItems) {
   destroyChart(luminanceChart);
   destroyChart(temperatureChart);
@@ -439,10 +538,11 @@ function drawCharts(measurements, forecastItems) {
     });
   }
   if (temperatureDatasets.length) {
+    const bounds = calculateAxisBounds(actualTemperature.concat(forecastTemperature), 0, 100, 0.15, 5);
     const options = baseChartOptions();
     options.scales.y = {
-      min: 0,
-      max: 100,
+      min: bounds.min,
+      max: bounds.max,
       ticks: { color: "#9aa4b2", maxTicksLimit: isMobileLayout() ? 4 : 6 },
       grid: { color: "rgba(148, 163, 184, 0.12)" },
       title: { display: true, text: "Temperature (F)", color: "#9aa4b2" },
@@ -499,12 +599,14 @@ function drawCharts(measurements, forecastItems) {
   }
 
   if (humidityPressureDatasets.length) {
+    const humidityBounds = calculateAxisBounds(actualHumidity.concat(forecastHumidity), 0, 100, 0.1, 5);
+    const pressureBounds = calculateAxisBounds(actualPressure.concat(forecastPressure), 29.5, 30.5, 0.08, 0.5);
     const options = baseChartOptions();
     options.scales.yHumidity = {
       type: "linear",
       position: "left",
-      min: 0,
-      max: 100,
+      min: humidityBounds.min,
+      max: humidityBounds.max,
       ticks: { color: "#9aa4b2", maxTicksLimit: isMobileLayout() ? 4 : 6 },
       grid: { color: "rgba(148, 163, 184, 0.12)" },
       title: { display: true, text: "Humidity (%)", color: "#9aa4b2" },
@@ -512,8 +614,8 @@ function drawCharts(measurements, forecastItems) {
     options.scales.yPressure = {
       type: "linear",
       position: "right",
-      min: 29.5,
-      max: 30.5,
+      min: pressureBounds.min,
+      max: pressureBounds.max,
       ticks: { color: "#9aa4b2", maxTicksLimit: isMobileLayout() ? 4 : 6 },
       grid: { drawOnChartArea: false },
       title: { display: true, text: "Pressure (inHg)", color: "#9aa4b2" },

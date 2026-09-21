@@ -59,7 +59,14 @@ class Thingy52BleConnector(SensorConnector):
         return measurements
 
     async def _resolve_device(self):
-        matches = await BleakScanner.discover(timeout=6.0)
+        try:
+            matches = await BleakScanner.discover(timeout=6.0)
+        except Exception as exc:
+            message = str(exc).lower()
+            if "bluetooth" in message and ("turned on" in message or "off" in message or "disabled" in message):
+                raise RuntimeError("Bluetooth is turned off. Turn on Bluetooth on the device or Pi, then retry.") from exc
+            raise RuntimeError(f"BLE scan failed: {exc}") from exc
+
         target_address = self.ble_address.lower()
         thingy_candidates = []
 

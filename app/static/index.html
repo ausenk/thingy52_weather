@@ -8,12 +8,23 @@
   </head>
   <body>
     <main class="layout">
-      <section class="hero hero-compact">
-        <div class="hero-copy-block hero-copy-block-compact">
-          <p class="eyebrow">Sensor Dashboard</p>
-          <h1>Thingy:52</h1>
+      <section class="hero">
+        <div class="hero-copy-block">
+          <p class="eyebrow">Weather station</p>
+          <div class="hero-main">
+            <div>
+              <h1>Local Weather</h1>
+              <p class="hero-subtitle">Thingy:52 environmental dashboard</p>
+            </div>
+            <div id="weather-summary" class="weather-summary" aria-live="polite">
+              <div class="summary-temp">--°F</div>
+              <div class="summary-meta">Waiting for data…</div>
+            </div>
+          </div>
         </div>
       </section>
+
+      <div id="status-banner" class="status-banner" aria-live="polite">Loading station status…</div>
 
       <section class="conditions-panel conditions-panel-top">
         <div class="panel-header panel-header-compact">
