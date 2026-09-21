@@ -159,7 +159,7 @@ function formatAxisTime(value, rangeHours = null) {
   const date = new Date(Number(value));
 
   if (rangeHours !== null && rangeHours > 24) {
-    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+    return date.toLocaleDateString([], { month: "2-digit", day: "2-digit" });
   }
 
   return isMobileLayout()
@@ -412,6 +412,8 @@ function destroyChart(chart) {
 
 function baseChartOptions() {
   const mobile = isMobileLayout();
+  const tickCount = selectedHours === 72 ? 3 : selectedHours === 168 ? 7 : mobile ? 4 : 6;
+
   return {
     responsive: true,
     maintainAspectRatio: false,
@@ -452,7 +454,7 @@ function baseChartOptions() {
         type: "linear",
         ticks: {
           color: "#9aa4b2",
-          maxTicksLimit: mobile ? 4 : 6,
+          maxTicksLimit: tickCount,
           callback(value) {
             return formatAxisTime(value, selectedHours);
           },
