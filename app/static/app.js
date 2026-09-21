@@ -26,6 +26,7 @@ const connectionError = document.querySelector("#connection-error");
 const batteryLevel = document.querySelector("#battery-level");
 const batteryFill = document.querySelector("#battery-fill");
 const batteryTime = document.querySelector("#battery-time");
+const appVersionTag = document.querySelector("#app-version-tag");
 const conditionsCards = document.querySelector("#conditions-cards");
 const weatherSummary = document.querySelector("#weather-summary");
 const statusBanner = document.querySelector("#status-banner");
@@ -383,6 +384,19 @@ function updateThingyStatus(status, latestItems) {
 
 async function loadPollerStatus() {
   latestPollerStatus = await fetchJson("/api/poller");
+}
+
+async function loadAppVersion() {
+  try {
+    const payload = await fetchJson("/api/version");
+    if (appVersionTag && payload?.version) {
+      appVersionTag.textContent = `v${payload.version}`;
+    }
+  } catch (error) {
+    if (appVersionTag) {
+      appVersionTag.textContent = "vunknown";
+    }
+  }
 }
 
 function destroyChart(chart) {
@@ -751,6 +765,7 @@ mobileLayout.addEventListener("change", () => {
 
 connectLiveUpdates();
 syncResponsiveState(false);
+loadAppVersion();
 loadDashboard().catch((error) => {
   showDashboardError(error.message);
 });

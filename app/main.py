@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from . import __version__
 from .config import get_settings
 from .db import Database
 from .services.nws import NwsForecastService
@@ -36,8 +37,13 @@ async def lifespan(_: FastAPI):
         await poller.stop()
 
 
-app = FastAPI(title="Thingy:52 Dashboard", lifespan=lifespan)
+app = FastAPI(title="Thingy:52 Dashboard", version=__version__, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+
+
+@app.get("/api/version")
+async def version() -> dict[str, str]:
+    return {"version": __version__}
 
 
 @app.get("/", response_class=FileResponse)
