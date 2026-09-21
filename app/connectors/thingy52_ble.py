@@ -20,6 +20,8 @@ class Thingy52BleConnector(SensorConnector):
     HUMIDITY_CHARACTERISTIC = "ef680203-9b35-4933-9b10-52ffa9740042"
     LIGHT_INTENSITY_CHARACTERISTIC = "ef680205-9b35-4933-9b10-52ffa9740042"
     BATTERY_CHARACTERISTIC = "00002a19-0000-1000-8000-00805f9b34fb"
+    RETRY_ATTEMPTS = 3
+    RETRY_BACKOFF_SECONDS = 3.0
 
     def __init__(
         self,
@@ -31,32 +33,65 @@ class Thingy52BleConnector(SensorConnector):
         self.ble_address = ble_address
         self.connect_timeout_seconds = connect_timeout_seconds
 
+    @staticmethod
+    def _is_transient_ble_error(exc: Exception) -> bool:
+        message = str(exc).lower()
+        transient_markers = (
+            "device disconnected",
+            "failed to discover services",
+            "eoferror",
+            "operation was cancelled",
+            "connection reset",
+            "resource temporarily unavailable",
+            "connection aborted",
+            "timed out waiting for thingy:52 environment notifications",
+            "no matching connection for device",
+        )
+        return any(marker in message for marker in transient_markers)
+
     async def read_measurements(self) -> list[Measurement]:
         if BleakClient is None or BleakScanner is None:
             raise RuntimeError("bleak is not installed; install requirements before using BLE mode.")
         if not self.ble_address:
             raise RuntimeError("THINGY52_BLE_ADDRESS is required when THINGY52_CONNECTOR=ble.")
 
-        device = await self._resolve_device()
+        last_error: Exception | None = None
+        for attempt in range(1, self.RETRY_ATTEMPTS + 1):
+            try:
+                device = await self._resolve_device()
+                async with BleakClient(device, timeout=self.connect_timeout_seconds) as client:
+                    samples = await self._collect_environment_notifications(client)
+                    battery_level = await self._read_battery_level(client)
 
-        async with BleakClient(device, timeout=self.connect_timeout_seconds) as client:
-            samples = await self._collect_environment_notifications(client)
-            battery_level = await self._read_battery_level(client)
+                now = datetime.now(timezone.utc)
+                measurements = [
+                    Measurement(self.device_id, "temperature", samples["temperature"], "C", now, "thingy52-ble"),
+                    Measurement(self.device_id, "pressure", samples["pressure"], "hPa", now, "thingy52-ble"),
+                    Measurement(self.device_id, "humidity", samples["humidity"], "%", now, "thingy52-ble"),
+                    Measurement(self.device_id, "battery_level", battery_level, "%", now, "thingy52-ble"),
+                ]
 
-        now = datetime.now(timezone.utc)
-        measurements = [
-            Measurement(self.device_id, "temperature", samples["temperature"], "C", now, "thingy52-ble"),
-            Measurement(self.device_id, "pressure", samples["pressure"], "hPa", now, "thingy52-ble"),
-            Measurement(self.device_id, "humidity", samples["humidity"], "%", now, "thingy52-ble"),
-            Measurement(self.device_id, "battery_level", battery_level, "%", now, "thingy52-ble"),
-        ]
+                if "light_intensity" in samples:
+                    measurements.append(
+                        Measurement(self.device_id, "light_intensity", samples["light_intensity"], "counts", now, "thingy52-ble")
+                    )
 
-        if "light_intensity" in samples:
-            measurements.append(
-                Measurement(self.device_id, "light_intensity", samples["light_intensity"], "counts", now, "thingy52-ble")
-            )
+                return measurements
+            except Exception as exc:
+                last_error = exc
+                if not self._is_transient_ble_error(exc):
+                    raise
+                if attempt < self.RETRY_ATTEMPTS:
+                    await asyncio.sleep(self.RETRY_BACKOFF_SECONDS * attempt)
+                    continue
 
-        return measurements
+        if last_error is not None:
+            raise RuntimeError(
+                "Thingy:52 is sleeping or disconnected. The device could not complete a BLE read after retries. "
+                f"Last error: {last_error}"
+            ) from last_error
+
+        raise RuntimeError("Thingy:52 BLE read failed for an unknown reason.")
 
     async def _resolve_device(self):
         try:

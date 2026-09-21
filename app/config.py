@@ -41,7 +41,7 @@ class Settings:
         default_factory=lambda: os.getenv("THINGY52_CONNECTOR", "mock")
     )
     poll_interval_seconds: int = field(
-        default_factory=lambda: int(os.getenv("THINGY52_POLL_INTERVAL_SECONDS", "30"))
+        default_factory=lambda: int(os.getenv("THINGY52_POLL_INTERVAL_SECONDS", "180"))
     )
     autopoll_enabled: bool = field(
         default_factory=lambda: env_flag("THINGY52_AUTOPOLL_ENABLED", True)

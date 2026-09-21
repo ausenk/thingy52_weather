@@ -39,7 +39,7 @@ Environment variables:
 
 - `THINGY52_DEVICE_ID`: logical device id stored with each measurement
 - `THINGY52_CONNECTOR`: `mock` or `ble`
-- `THINGY52_POLL_INTERVAL_SECONDS`: cadence for background polling
+- `THINGY52_POLL_INTERVAL_SECONDS`: cadence for background polling; for sleepy Thingy:52 devices, use a longer interval such as 180 seconds or more to avoid disconnect churn
 - `THINGY52_DATABASE_PATH`: SQLite file location
 - `THINGY52_BLE_ADDRESS`: BLE address for the Thingy:52 when using BLE mode
 - `THINGY52_NWS_LATITUDE`: latitude used to look up the NWS forecast gridpoint
@@ -90,6 +90,8 @@ For a Pi Zero, the realistic target is a Raspberry Pi Zero W or Zero 2 W so BLE 
 ## Notes on Thingy:52 integration
 
 The BLE connector is built around the Nordic environmental service characteristics for temperature, pressure, and humidity. If your device setup uses different services, update the UUIDs or decoding logic in `app/connectors/thingy52_ble.py`.
+
+For sleepy or intermittently advertising Thingy:52 devices, a longer poll interval is usually more reliable than a short, aggressive loop. Values such as 180–300 seconds are a good starting point.
 
 ## Testing on Windows before deployment
 
