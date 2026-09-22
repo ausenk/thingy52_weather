@@ -1,4 +1,4 @@
-INFO:     Started server process [334496]
+INFO:     Started server process [459731]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
@@ -38,21 +38,18 @@ Traceback (most recent call last):
   File "/app/app/connectors/thingy52_ble.py", line 103, in _resolve_device
     raise RuntimeError(f"BLE scan failed: {exc}") from exc
 RuntimeError: BLE scan failed: [org.freedesktop.DBus.Error.ServiceUnknown] The name org.bluez was not provided by any .service files
-INFO:     127.0.0.1:40698 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40698 - "GET /static/style.css?v=20260318f HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40714 - "GET /static/app.js?v=20260318f HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40714 - "GET /api/version HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40698 - "GET /api/poller HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40714 - "GET /api/events HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40698 - "GET /api/latest HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40722 - "GET /api/measurements?since_hours=24&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40722 - "GET /api/poller HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40722 - "GET /api/latest HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40698 - "GET /api/measurements?since_hours=24&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40698 - "GET /api/poller HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40698 - "GET /api/latest HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40722 - "GET /api/measurements?since_hours=168&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [334496]
+INFO:     127.0.0.1:48938 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48938 - "GET /static/style.css?v=20260318f HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48952 - "GET /static/app.js?v=20260318f HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48952 - "GET /api/version HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48938 - "GET /api/poller HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48968 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48938 - "GET /api/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48952 - "GET /api/measurements?since_hours=24&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48952 - "GET /api/poller HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48952 - "GET /api/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48938 - "GET /api/measurements?since_hours=24&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48938 - "GET /api/poller HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48938 - "GET /api/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48970 - "GET /api/measurements?since_hours=24&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48952 - "GET /api/forecast?hours=24&mode=future&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK

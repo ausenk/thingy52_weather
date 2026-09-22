@@ -591,8 +591,12 @@ function drawCharts(measurements, forecastItems) {
     });
   }
   if (temperatureDatasets.length) {
-    const bounds = calculateAxisBounds(actualTemperature.concat(forecastTemperature), null, null, 0.15, 5);
-    const xBounds = calculateTimeAxisBounds(actualTemperature.concat(forecastTemperature));
+    let combinedData = [];
+    if (showActual) combinedData = combinedData.concat(actualTemperature);
+    if (showForecast) combinedData = combinedData.concat(forecastTemperature);
+
+    const bounds = calculateAxisBounds(combinedData, null, null, 0.15, 5);
+    const xBounds = calculateTimeAxisBounds(combinedData);
     const options = baseChartOptions();
     options.scales.x = {
       ...options.scales.x,
@@ -658,9 +662,20 @@ function drawCharts(measurements, forecastItems) {
   }
 
   if (humidityPressureDatasets.length) {
-    const humidityBounds = calculateAxisBounds(actualHumidity.concat(forecastHumidity), null, null, 0.1, 5);
-    const pressureBounds = calculateAxisBounds(actualPressure.concat(forecastPressure), null, null, 0.08, 0.5);
-    const xBounds = calculateTimeAxisBounds(actualHumidity.concat(forecastHumidity, actualPressure, forecastPressure));
+    let combinedHumidity = [];
+    let combinedPressure = [];
+    if (showActual) {
+      combinedHumidity = combinedHumidity.concat(actualHumidity);
+      combinedPressure = combinedPressure.concat(actualPressure);
+    }
+    if (showForecast) {
+      combinedHumidity = combinedHumidity.concat(forecastHumidity);
+      combinedPressure = combinedPressure.concat(forecastPressure);
+    }
+
+    const humidityBounds = calculateAxisBounds(combinedHumidity, null, null, 0.1, 5);
+    const pressureBounds = calculateAxisBounds(combinedPressure, null, null, 0.08, 0.5);
+    const xBounds = calculateTimeAxisBounds(combinedHumidity.concat(combinedPressure));
     const options = baseChartOptions();
     options.scales.x = {
       ...options.scales.x,
