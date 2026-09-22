@@ -452,6 +452,7 @@ function baseChartOptions() {
     scales: {
       x: {
         type: "time",
+        bounds: "data",
         time: {
           unit: selectedHours > 24 ? "day" : "hour",
           displayFormats: {
@@ -539,14 +540,22 @@ function drawCharts(measurements, forecastItems) {
   const showActual = selectedMode !== "future";
   const showForecast = selectedMode !== "past";
 
+  const allDataPoints = [];
+  if (showActual) {
+    allDataPoints.push(...actualLuminance, ...actualTemperature, ...actualHumidity, ...actualPressure);
+  }
+  if (showForecast) {
+    allDataPoints.push(...forecastTemperature, ...forecastHumidity, ...forecastPressure);
+  }
+  const globalXBounds = calculateTimeAxisBounds(allDataPoints);
+
   if (showActual && actualLuminance.length) {
     const luminanceBounds = calculateAxisBounds(actualLuminance, null, null, 0.18, 10);
     const options = baseChartOptions();
-    const xBounds = calculateTimeAxisBounds(actualLuminance);
     options.scales.x = {
       ...options.scales.x,
-      min: xBounds.min,
-      max: xBounds.max,
+      min: globalXBounds.min,
+      max: globalXBounds.max,
     };
     options.scales.y = {
       min: luminanceBounds.min,
@@ -592,12 +601,11 @@ function drawCharts(measurements, forecastItems) {
   }
   if (temperatureDatasets.length) {
     const bounds = calculateAxisBounds(actualTemperature.concat(forecastTemperature), null, null, 0.15, 5);
-    const xBounds = calculateTimeAxisBounds(actualTemperature.concat(forecastTemperature));
     const options = baseChartOptions();
     options.scales.x = {
       ...options.scales.x,
-      min: xBounds.min,
-      max: xBounds.max,
+      min: globalXBounds.min,
+      max: globalXBounds.max,
     };
     options.scales.y = {
       min: bounds.min,
@@ -660,12 +668,11 @@ function drawCharts(measurements, forecastItems) {
   if (humidityPressureDatasets.length) {
     const humidityBounds = calculateAxisBounds(actualHumidity.concat(forecastHumidity), null, null, 0.1, 5);
     const pressureBounds = calculateAxisBounds(actualPressure.concat(forecastPressure), null, null, 0.08, 0.5);
-    const xBounds = calculateTimeAxisBounds(actualHumidity.concat(forecastHumidity, actualPressure, forecastPressure));
     const options = baseChartOptions();
     options.scales.x = {
       ...options.scales.x,
-      min: xBounds.min,
-      max: xBounds.max,
+      min: globalXBounds.min,
+      max: globalXBounds.max,
     };
     options.scales.yHumidity = {
       type: "linear",
