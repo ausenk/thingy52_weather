@@ -451,13 +451,17 @@ function baseChartOptions() {
     },
     scales: {
       x: {
-        type: "linear",
+        type: "time",
+        time: {
+          unit: selectedHours > 24 ? "day" : "hour",
+          displayFormats: {
+            hour: isMobileLayout() ? "ha" : "h:mm a",
+            day: "MMM d",
+          },
+        },
         ticks: {
           color: "#9aa4b2",
-          maxTicksLimit: tickCount,
-          callback(value) {
-            return formatAxisTime(value, selectedHours);
-          },
+          maxTicksLimit: tickCount + 1,
         },
         grid: { color: "rgba(148, 163, 184, 0.12)" },
       },
