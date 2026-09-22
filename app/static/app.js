@@ -412,7 +412,7 @@ function destroyChart(chart) {
 
 function baseChartOptions() {
   const mobile = isMobileLayout();
-  const tickCount = selectedHours === 72 ? 3 : selectedHours === 168 ? 7 : mobile ? 4 : 6;
+  const tickCount = selectedHours === 72 ? 4 : selectedHours === 168 ? 8 : mobile ? 4 : 6;
 
   return {
     responsive: true,
@@ -540,7 +540,7 @@ function drawCharts(measurements, forecastItems) {
   const showForecast = selectedMode !== "past";
 
   if (showActual && actualLuminance.length) {
-    const luminanceBounds = calculateAxisBounds(actualLuminance, 0, null, 0.18, 10);
+    const luminanceBounds = calculateAxisBounds(actualLuminance, null, null, 0.18, 10);
     const options = baseChartOptions();
     const xBounds = calculateTimeAxisBounds(actualLuminance);
     options.scales.x = {
@@ -591,7 +591,7 @@ function drawCharts(measurements, forecastItems) {
     });
   }
   if (temperatureDatasets.length) {
-    const bounds = calculateAxisBounds(actualTemperature.concat(forecastTemperature), 0, 100, 0.15, 5);
+    const bounds = calculateAxisBounds(actualTemperature.concat(forecastTemperature), null, null, 0.15, 5);
     const xBounds = calculateTimeAxisBounds(actualTemperature.concat(forecastTemperature));
     const options = baseChartOptions();
     options.scales.x = {
@@ -658,8 +658,8 @@ function drawCharts(measurements, forecastItems) {
   }
 
   if (humidityPressureDatasets.length) {
-    const humidityBounds = calculateAxisBounds(actualHumidity.concat(forecastHumidity), 0, 100, 0.1, 5);
-    const pressureBounds = calculateAxisBounds(actualPressure.concat(forecastPressure), 29.5, 30.5, 0.08, 0.5);
+    const humidityBounds = calculateAxisBounds(actualHumidity.concat(forecastHumidity), null, null, 0.1, 5);
+    const pressureBounds = calculateAxisBounds(actualPressure.concat(forecastPressure), null, null, 0.08, 0.5);
     const xBounds = calculateTimeAxisBounds(actualHumidity.concat(forecastHumidity, actualPressure, forecastPressure));
     const options = baseChartOptions();
     options.scales.x = {
