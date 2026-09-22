@@ -1,0 +1,63 @@
+INFO:     Started server process [303035]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+Polling failed: BLE scan failed: [org.freedesktop.DBus.Error.ServiceUnknown] The name org.bluez was not provided by any .service files
+Traceback (most recent call last):
+  File "/app/app/connectors/thingy52_ble.py", line 98, in _resolve_device
+    matches = await BleakScanner.discover(timeout=6.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/__init__.py", line 263, in discover
+    async with cls(**kwargs) as scanner:
+               ^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/__init__.py", line 140, in __aenter__
+    await self._backend.start()
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/backends/bluezdbus/scanner.py", line 120, in start
+    manager = await get_global_bluez_manager()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/backends/bluezdbus/manager.py", line 1131, in get_global_bluez_manager
+    await instance.async_init()
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/backends/bluezdbus/manager.py", line 301, in async_init
+    assert_reply(reply)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/backends/bluezdbus/utils.py", line 27, in assert_reply
+    raise BleakDBusError(reply.error_name, reply.body)
+bleak.exc.BleakDBusError: [org.freedesktop.DBus.Error.ServiceUnknown] The name org.bluez was not provided by any .service files
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/app/services/poller.py", line 130, in _run
+    count = await self.poll_once()
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/services/poller.py", line 107, in poll_once
+    measurements = await self.connector.read_measurements()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/connectors/thingy52_ble.py", line 61, in read_measurements
+    device = await self._resolve_device()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/connectors/thingy52_ble.py", line 103, in _resolve_device
+    raise RuntimeError(f"BLE scan failed: {exc}") from exc
+RuntimeError: BLE scan failed: [org.freedesktop.DBus.Error.ServiceUnknown] The name org.bluez was not provided by any .service files
+INFO:     127.0.0.1:55638 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55638 - "GET /static/style.css?v=20260318f HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /static/app.js?v=20260318f HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/version HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/poller HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55638 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/measurements?since_hours=24&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/poller HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/measurements?since_hours=24&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/poller HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47294 - "GET /api/measurements?since_hours=24&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/forecast?hours=24&mode=future&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/poller HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47294 - "GET /api/measurements?since_hours=168&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/forecast?hours=168&mode=future&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [303035]
