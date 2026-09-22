@@ -1,0 +1,42 @@
+INFO:     Started server process [260851]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+ERROR:    [Errno 98] error while attempting to bind on address ('0.0.0.0', 8000): address already in use
+INFO:     Waiting for application shutdown.
+Polling failed: BLE scan failed: [org.freedesktop.DBus.Error.ServiceUnknown] The name org.bluez was not provided by any .service files
+Traceback (most recent call last):
+  File "/app/app/connectors/thingy52_ble.py", line 98, in _resolve_device
+    matches = await BleakScanner.discover(timeout=6.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/__init__.py", line 263, in discover
+    async with cls(**kwargs) as scanner:
+               ^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/__init__.py", line 140, in __aenter__
+    await self._backend.start()
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/backends/bluezdbus/scanner.py", line 120, in start
+    manager = await get_global_bluez_manager()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/backends/bluezdbus/manager.py", line 1131, in get_global_bluez_manager
+    await instance.async_init()
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/backends/bluezdbus/manager.py", line 301, in async_init
+    assert_reply(reply)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/site-packages/bleak/backends/bluezdbus/utils.py", line 27, in assert_reply
+    raise BleakDBusError(reply.error_name, reply.body)
+bleak.exc.BleakDBusError: [org.freedesktop.DBus.Error.ServiceUnknown] The name org.bluez was not provided by any .service files
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/app/services/poller.py", line 130, in _run
+    count = await self.poll_once()
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/services/poller.py", line 107, in poll_once
+    measurements = await self.connector.read_measurements()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/connectors/thingy52_ble.py", line 61, in read_measurements
+    device = await self._resolve_device()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/connectors/thingy52_ble.py", line 103, in _resolve_device
+    raise RuntimeError(f"BLE scan failed: {exc}") from exc
+RuntimeError: BLE scan failed: [org.freedesktop.DBus.Error.ServiceUnknown] The name org.bluez was not provided by any .service files
+INFO:     Application shutdown complete.
