@@ -517,6 +517,10 @@ function calculateTimeAxisBounds(series) {
   const max = Math.max(...timestamps);
   const span = Math.max(max - min, 60_000);
 
+  if (selectedMode === "future") {
+    return { min, max };
+  }
+
   if (selectedHours > 24) {
     const minDate = new Date(min);
     minDate.setHours(0, 0, 0, 0);

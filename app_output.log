@@ -1,8 +1,7 @@
-INFO:     Started server process [260851]
+INFO:     Started server process [303035]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-ERROR:    [Errno 98] error while attempting to bind on address ('0.0.0.0', 8000): address already in use
-INFO:     Waiting for application shutdown.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 Polling failed: BLE scan failed: [org.freedesktop.DBus.Error.ServiceUnknown] The name org.bluez was not provided by any .service files
 Traceback (most recent call last):
   File "/app/app/connectors/thingy52_ble.py", line 98, in _resolve_device
@@ -39,4 +38,26 @@ Traceback (most recent call last):
   File "/app/app/connectors/thingy52_ble.py", line 103, in _resolve_device
     raise RuntimeError(f"BLE scan failed: {exc}") from exc
 RuntimeError: BLE scan failed: [org.freedesktop.DBus.Error.ServiceUnknown] The name org.bluez was not provided by any .service files
+INFO:     127.0.0.1:55638 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55638 - "GET /static/style.css?v=20260318f HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /static/app.js?v=20260318f HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/version HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/poller HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55638 - "GET /api/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/measurements?since_hours=24&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/poller HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/measurements?since_hours=24&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/poller HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47294 - "GET /api/measurements?since_hours=24&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/forecast?hours=24&mode=future&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/poller HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55666 - "GET /api/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47294 - "GET /api/measurements?since_hours=168&limit=5000&metric=light_intensity&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55654 - "GET /api/forecast?hours=168&mode=future&metric=temperature&metric=humidity&metric=pressure HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
+INFO:     Finished server process [303035]
